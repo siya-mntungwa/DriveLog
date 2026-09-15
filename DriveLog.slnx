@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DriveLog.Api/DriveLog.Api.csproj" />
+  <Project Path="DriveLog.Data/DriveLog.Data.csproj" />
+  <Project Path="DriveLog.Web/DriveLog.Web.csproj" />
+</Solution>

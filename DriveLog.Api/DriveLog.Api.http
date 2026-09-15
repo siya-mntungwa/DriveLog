@@ -1,0 +1,6 @@
+@DriveLog.Api_HostAddress = http://localhost:5037
+
+GET {{DriveLog.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
