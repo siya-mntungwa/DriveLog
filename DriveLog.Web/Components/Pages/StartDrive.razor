@@ -1,0 +1,97 @@
+@page "/driver/start-drive"
+@rendermode InteractiveServer
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Start Drive</PageTitle>
+
+<h1>Start Drive</h1>
+
+@if (vehicles == null)
+{
+    <p>Loading vehicles...</p>
+}
+else
+{
+    <EditForm Model="request" OnValidSubmit="HandleStartDrive" FormName="StartDriveForm">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label">Start Location</label>
+            <InputText class="form-control"
+                       @bind-Value="request.StartLocation" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Purpose</label>
+            <InputText class="form-control"
+                       @bind-Value="request.Purpose" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Vehicle</label>
+
+            <select class="form-select" @bind="request.VehicleId">
+                <option value="0">Select a vehicle</option>
+
+                @foreach (var vehicle in vehicles.Where(v => v.Status == 0))
+                {
+                    <option value="@vehicle.Id">
+                        @vehicle.RegistrationNumber -
+                        @vehicle.Make @vehicle.Model
+                    </option>
+                }
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Start Drive
+        </button>
+    </EditForm>
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <div class="alert alert-info mt-3">
+            @message
+        </div>
+    }
+}
+
+@code {
+    private List<VehicleDto>? vehicles;
+
+    private StartDriveRequest request = new()
+    {
+        UserId = 2
+    };
+
+    private string message = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsDriver)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        request.UserId = AuthService.CurrentUser!.UserId;
+
+        vehicles = await ApiService.GetVehiclesAsync();
+    }
+
+    private async Task HandleStartDrive()
+    {
+        var result = await ApiService.StartDriveAsync(request);
+
+        if (result == null)
+        {
+            message = "Unable to start the drive.";
+            return;
+        }
+
+        message = $"Drive started successfully. Drive ID: {result.Id}";
+    }
+}

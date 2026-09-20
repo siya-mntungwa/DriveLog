@@ -1,0 +1,193 @@
+@page "/driver"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Driver Dashboard</PageTitle>
+
+<h1>Driver Dashboard</h1>
+
+@if (currentDriver != null)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">
+                Welcome, @currentDriver.FirstName @currentDriver.LastName
+            </h5>
+
+            <p class="mb-1">
+                <strong>Employee ID:</strong>
+                @currentDriver.EmployeeId
+            </p>
+
+            <p class="mb-1">
+                <strong>Email:</strong>
+                @currentDriver.Email
+            </p>
+
+            <p class="mb-0">
+                <strong>Status:</strong>
+                @currentDriver.Status
+            </p>
+        </div>
+    </div>
+}
+
+<button class="btn btn-outline-danger mb-4"
+        @onclick="Logout">
+    Logout
+</button>
+
+<div class="mb-4">
+    <a href="/driver/start-drive" class="btn btn-primary me-2">
+        Start Drive
+    </a>
+
+    <a href="/driver/drive" class="btn btn-secondary me-2">
+        Active Drive
+    </a>
+
+    <a href="/driver/documents" class="btn btn-outline-secondary">
+        My Documents
+    </a>
+
+    <a href="/driver/history" class="btn btn-outline-secondary">
+        Drive History
+    </a>
+</div>
+
+@if (eligibility == null)
+{
+    <p>Checking driving eligibility...</p>
+}
+else if (eligibility.IsEligible)
+{
+    <div class="alert alert-success">
+        <strong>Eligible to Drive</strong>
+        <p class="mb-0">@eligibility.Message</p>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">
+        <strong>Not Eligible to Drive</strong>
+        <p class="mb-0">@eligibility.Message</p>
+    </div>
+}
+
+@if (drivers == null)
+{
+    <p>Loading drivers...</p>
+}
+else if (drivers.Count == 0)
+{
+    <p>No drivers found.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var driver in drivers)
+                {
+                    <tr>
+                        <td>@driver.EmployeeId</td>
+                        <td>@driver.FirstName @driver.LastName</td>
+                        <td>@driver.Email</td>
+                        <td>@driver.Status</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<h2>Available Vehicles</h2>
+
+@if (vehicles == null)
+{
+    <p>Loading vehicles...</p>
+}
+else
+{
+    var availableVehicles = vehicles
+        .Where(v => v.Status == 0)
+        .ToList();
+
+    if (availableVehicles.Count == 0)
+    {
+        <p>No vehicles are currently available.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Registration</th>
+                        <th>Vehicle</th>
+                        <th>Year</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var vehicle in availableVehicles)
+                    {
+                        <tr>
+                            <td>@vehicle.RegistrationNumber</td>
+                            <td>@vehicle.Make @vehicle.Model</td>
+                            <td>@vehicle.Year</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<DriverDto>? drivers;
+    private List<VehicleDto>? vehicles;
+
+    private DriverEligibilityDto? eligibility;
+    private DriverDto? currentDriver;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsDriver)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        drivers = await ApiService.GetDriversAsync();
+        vehicles = await ApiService.GetVehiclesAsync();
+
+        currentDriver = drivers.FirstOrDefault(
+            d => d.Id == AuthService.CurrentUser!.UserId);
+
+        if (currentDriver != null)
+        {
+            eligibility = await ApiService.GetDriverEligibilityAsync(
+                currentDriver.Id);
+        }
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login");
+    }
+}

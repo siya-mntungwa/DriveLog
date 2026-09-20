@@ -1,0 +1,303 @@
+@page "/admin/vehicles"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin - Vehicles</PageTitle>
+
+<h1>Vehicles</h1>
+
+<a href="/admin" class="btn btn-secondary mb-4">
+    ← Back to Dashboard
+</a>
+
+@if (vehicles == null)
+{
+    <p>Loading vehicles...</p>
+}
+else if (vehicles.Count == 0)
+{
+    <div class="alert alert-info">
+        No vehicles found.
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4 class="card-title">Add Vehicle</h4>
+
+            <div class="mb-3">
+                <label class="form-label">Registration Number</label>
+                <InputText class="form-control"
+                        @bind-Value="newVehicle.RegistrationNumber" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Make</label>
+                <InputText class="form-control"
+                        @bind-Value="newVehicle.Make" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Model</label>
+                <InputText class="form-control"
+                        @bind-Value="newVehicle.Model" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Year</label>
+                <InputNumber class="form-control"
+                            @bind-Value="newVehicle.Year" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info">
+                    @message
+                </div>
+            }
+
+            <button class="btn btn-primary"
+                    @onclick="AddVehicle">
+                Add Vehicle
+            </button>
+        </div>
+    </div>
+
+    @if (isEditing)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Edit Vehicle</h4>
+
+                <div class="mb-3">
+                    <label class="form-label">Registration Number</label>
+                    <InputText class="form-control"
+                            @bind-Value="editVehicle.RegistrationNumber" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Make</label>
+                    <InputText class="form-control"
+                            @bind-Value="editVehicle.Make" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Model</label>
+                    <InputText class="form-control"
+                            @bind-Value="editVehicle.Model" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Year</label>
+                    <InputNumber class="form-control"
+                                @bind-Value="editVehicle.Year" />
+                </div>
+
+                <button class="btn btn-primary me-2"
+                        @onclick="SaveVehicle">
+                    Save Changes
+                </button>
+
+                <button class="btn btn-secondary"
+                        @onclick="CancelEditing">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Registration</th>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var vehicle in vehicles)
+                {
+                    <tr>
+                        <td>@vehicle.RegistrationNumber</td>
+                        <td>@vehicle.Make</td>
+                        <td>@vehicle.Model</td>
+                        <td>@vehicle.Year</td>
+                        <td>
+                            @switch (vehicle.Status)
+                            {
+                                case 0:
+                                    <span class="badge bg-success">Available</span>
+                                    break;
+
+                                case 1:
+                                    <span class="badge bg-warning text-dark">In Use</span>
+                                    break;
+
+                                case 2:
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    break;
+
+                                default:
+                                    <span class="badge bg-dark">Unknown</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            @if (vehicle.Status != 2)
+                            {
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => DeactivateVehicle(vehicle.Id)">
+                                    Deactivate
+                                </button>
+                            }
+                            @if (vehicle.Status == 2)
+                            {
+                                <button class="btn btn-sm btn-success"
+                                        @onclick="() => ReactivateVehicle(vehicle.Id)">
+                                    Reactivate
+                                </button>
+                            }
+
+                            <button class="btn btn-sm btn-primary me-2"
+                                    @onclick="() => StartEditing(vehicle)">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<VehicleDto>? vehicles;
+
+    private CreateVehicleRequest newVehicle = new();
+    private string? message;
+    private UpdateVehicleRequest editVehicle = new();
+    private int editingVehicleId;
+    private bool isEditing;
+
+    private async Task AddVehicle()
+    {
+        message = null;
+
+        if (string.IsNullOrWhiteSpace(newVehicle.RegistrationNumber) ||
+            string.IsNullOrWhiteSpace(newVehicle.Make) ||
+            string.IsNullOrWhiteSpace(newVehicle.Model))
+        {
+            message = "Please complete all vehicle fields.";
+            return;
+        }
+
+        var success = await ApiService.CreateVehicleAsync(newVehicle);
+
+        if (success)
+        {
+            message = "Vehicle added successfully.";
+
+            newVehicle = new CreateVehicleRequest();
+
+            vehicles = await ApiService.GetVehiclesAsync();
+        }
+        else
+        {
+            message = "Failed to add vehicle.";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        vehicles = await ApiService.GetVehiclesAsync();
+    }
+
+    private async Task DeactivateVehicle(int vehicleId)
+    {
+        var success = await ApiService.DeactivateVehicleAsync(vehicleId);
+
+        if (success)
+        {
+            message = "Vehicle deactivated successfully.";
+
+            vehicles = await ApiService.GetVehiclesAsync();
+        }
+        else
+        {
+            message = "Vehicle could not be deactivated.";
+        }
+    }
+
+    private async Task ReactivateVehicle(int vehicleId)
+    {
+        var success = await ApiService.ReactivateVehicleAsync(vehicleId);
+
+        if (success)
+        {
+            message = "Vehicle reactivated successfully.";
+
+            vehicles = await ApiService.GetVehiclesAsync();
+        }
+        else
+        {
+            message = "Vehicle could not be reactivated.";
+        }
+    }
+
+    private void StartEditing(VehicleDto vehicle)
+    {
+        editingVehicleId = vehicle.Id;
+
+        editVehicle = new UpdateVehicleRequest
+        {
+            RegistrationNumber = vehicle.RegistrationNumber,
+            Make = vehicle.Make,
+            Model = vehicle.Model,
+            Year = vehicle.Year
+        };
+
+        isEditing = true;
+        message = null;
+    }
+
+    private void CancelEditing()
+    {
+        isEditing = false;
+        editVehicle = new UpdateVehicleRequest();
+    }
+
+    private async Task SaveVehicle()
+    {
+        var success = await ApiService.UpdateVehicleAsync(
+            editingVehicleId,
+            editVehicle);
+
+        if (success)
+        {
+            message = "Vehicle updated successfully.";
+
+            isEditing = false;
+
+            vehicles = await ApiService.GetVehiclesAsync();
+        }
+        else
+        {
+            message = "Vehicle could not be updated.";
+        }
+    }
+}

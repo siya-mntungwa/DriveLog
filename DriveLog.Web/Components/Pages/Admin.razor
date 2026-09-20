@@ -1,0 +1,190 @@
+@page "/admin"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<h1>Admin Dashboard</h1>
+
+<div class="mb-4">
+    <a href="/admin/drivers" class="btn btn-primary me-2">
+        Drivers
+    </a>
+
+    <a href="/admin/vehicles" class="btn btn-secondary me-2">
+        Vehicles
+    </a>
+
+    <a href="/admin/drives" class="btn btn-outline-secondary">
+        Drive Logs
+    </a>
+    <a href="/admin/users" class="btn btn-primary">
+        Manage Users
+    </a>
+    <a href="/admin/reports" class="btn btn-primary">
+        Reports
+    </a>
+</div>
+
+<button class="btn btn-outline-danger mb-4"
+        @onclick="Logout">
+    Logout
+</button>
+
+@if (drivers == null || vehicles == null || driveLogs == null)
+{
+    <p>Loading dashboard...</p>
+}
+else
+{
+    <div class="row">
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Total Drivers</h5>
+                    <h2>@drivers.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Active Drivers</h5>
+                    <h2>@drivers.Count(d => d.Status == "Active")</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Total Vehicles</h5>
+                    <h2>@vehicles.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Available Vehicles</h5>
+                    <h2>@vehicles.Count(v => v.Status == 0)</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Vehicles In Use</h5>
+                    <h2>@vehicles.Count(v => v.Status == 1)</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Active Drives</h5>
+                    <h2>@driveLogs.Count(d => d.EndTime == null)</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <hr class="my-4" />
+
+    <h2>Active Drives</h2>
+
+    @if (ActiveDrives.Count == 0)
+    {
+        <div class="alert alert-info">
+            No active drives.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Started</th>
+                        <th>Start Location</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var drive in ActiveDrives)
+                    {
+                        var driver = drivers.FirstOrDefault(d => d.Id == drive.UserId);
+                        var vehicle = vehicles.FirstOrDefault(v => v.Id == drive.VehicleId);
+
+                        <tr>
+                            <td>
+                                @(driver == null
+                                    ? "Unknown"
+                                    : $"{driver.FirstName} {driver.LastName}")
+                            </td>
+
+                            <td>
+                                @(vehicle == null
+                                    ? "Unknown"
+                                    : $"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}")
+                            </td>
+
+                            <td>
+                                @drive.StartTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </td>
+
+                            <td>@drive.StartLocation</td>
+
+                            <td>@drive.Purpose</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<DriverDto>? drivers;
+    private List<VehicleDto>? vehicles;
+    private List<DriveLogDto>? driveLogs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        drivers = await ApiService.GetDriversAsync();
+        vehicles = await ApiService.GetVehiclesAsync();
+        driveLogs = await ApiService.GetDriveLogsAsync();
+    }
+
+    private List<DriveLogDto> ActiveDrives =>
+    driveLogs?
+        .Where(d => d.EndTime == null)
+        .OrderByDescending(d => d.StartTime)
+        .ToList()
+    ?? new List<DriveLogDto>();
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login");
+    }
+}

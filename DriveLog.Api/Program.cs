@@ -1,5 +1,9 @@
 using DriveLog.Data.Data;
+using QuestPDF.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using DriveLog.Api.Services;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +13,7 @@ builder.Services.AddDbContext<DriveLogDbContext>(options =>
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddScoped<DriveLogPdfService>();
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 

@@ -1,0 +1,115 @@
+@page "/admin/drives"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin - Drive Logs</PageTitle>
+
+<h1>Drive Logs</h1>
+
+<a href="/admin" class="btn btn-secondary mb-4">
+    ← Back to Dashboard
+</a>
+
+@if (driveLogs == null || drivers == null || vehicles == null)
+{
+    <p>Loading drive logs...</p>
+}
+else if (driveLogs.Count == 0)
+{
+    <div class="alert alert-info">
+        No drive logs found.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Driver</th>
+                    <th>Vehicle</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Start Location</th>
+                    <th>End Location</th>
+                    <th>Purpose</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var drive in driveLogs.OrderByDescending(d => d.StartTime))
+                {
+                    var driver = drivers.FirstOrDefault(d => d.Id == drive.UserId);
+                    var vehicle = vehicles.FirstOrDefault(v => v.Id == drive.VehicleId);
+
+                    <tr>
+                        <td>
+                            @(driver == null
+                                ? "Unknown"
+                                : $"{driver.FirstName} {driver.LastName}")
+                        </td>
+
+                        <td>
+                            @(vehicle == null
+                                ? "Unknown"
+                                : $"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}")
+                        </td>
+
+                        <td>@drive.StartTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+
+                        <td>
+                            @(drive.EndTime.HasValue
+                                ? drive.EndTime.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                : "-")
+                        </td>
+
+                        <td>@drive.StartLocation</td>
+
+                        <td>@(drive.EndLocation ?? "-")</td>
+
+                        <td>@drive.Purpose</td>
+
+                        <td>
+                            @if (drive.EndTime == null)
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Active
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">
+                                    Completed
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<DriveLogDto>? driveLogs;
+    private List<DriverDto>? drivers;
+    private List<VehicleDto>? vehicles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        driveLogs = await ApiService.GetDriveLogsAsync();
+        drivers = await ApiService.GetDriversAsync();
+        vehicles = await ApiService.GetVehiclesAsync();
+    }
+}

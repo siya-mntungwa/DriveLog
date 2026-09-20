@@ -1,0 +1,138 @@
+@page "/driver/drive"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Active Drive</PageTitle>
+
+<h1>Active Drive</h1>
+
+@if (drive == null)
+{
+    <div class="alert alert-info">
+        You do not currently have an active drive.
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Current Drive</h5>
+
+            <p>
+                <strong>Drive ID:</strong>
+                @drive.Id
+            </p>
+
+            <p>
+                <strong>Vehicle:</strong>
+
+                @if (vehicles != null)
+                {
+                    var vehicle = vehicles.FirstOrDefault(v => v.Id == drive.VehicleId);
+
+                    if (vehicle != null)
+                    {
+                        @($"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}")
+                    }
+                    else
+                    {
+                        @drive.VehicleId
+                    }
+                }
+            </p>
+
+            <p>
+                <strong>Start Time:</strong>
+                @drive.StartTime
+            </p>
+
+            <p>
+                <strong>Start Location:</strong>
+                @drive.StartLocation
+            </p>
+
+            <p>
+                <strong>Purpose:</strong>
+                @drive.Purpose
+            </p>
+
+            <EditForm Model="endRequest" OnValidSubmit="HandleEndDrive">
+                <div class="mb-3">
+                    <label class="form-label">End Location</label>
+
+                    <InputText class="form-control"
+                            @bind-Value="endRequest.EndLocation" />
+                </div>
+
+                <button type="submit" class="btn btn-danger">
+                    End Drive
+                </button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info mt-3">
+        @message
+    </div>
+}
+
+@code {
+    private DriveLogDto? drive;
+    private List<VehicleDto>? vehicles;
+
+    private int userId = 2;
+
+    private string endLocation = string.Empty;
+
+    private string message = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsDriver)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        var userId = AuthService.CurrentUser!.UserId;
+
+        drive = await ApiService.GetActiveDriveAsync(userId);
+        vehicles = await ApiService.GetVehiclesAsync();
+    }
+
+    private async Task HandleEndDrive()
+    {
+        if (drive == null)
+        {
+            return;
+        }
+
+        var result = await ApiService.EndDriveAsync(
+            drive.Id,
+            endRequest.EndLocation);
+
+        if (result == null)
+        {
+            message = "Unable to end the drive.";
+            return;
+        }
+
+        message = "Drive ended successfully.";
+
+        drive = null;
+    }
+
+    private EndDriveForm endRequest = new();
+
+    private class EndDriveForm
+    {
+        public string EndLocation { get; set; } = string.Empty;
+    }
+}

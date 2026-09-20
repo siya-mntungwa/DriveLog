@@ -1,0 +1,208 @@
+@page "/admin/users"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>DriveLog - Users</PageTitle>
+
+<h1>User Management</h1>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-info">
+        @message
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h4 class="card-title">Add User</h4>
+
+        <div class="mb-3">
+            <label class="form-label">Employee ID</label>
+            <InputText class="form-control"
+                       @bind-Value="newUser.EmployeeId" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">First Name</label>
+            <InputText class="form-control"
+                       @bind-Value="newUser.FirstName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Last Name</label>
+            <InputText class="form-control"
+                       @bind-Value="newUser.LastName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <InputText class="form-control"
+                       type="email"
+                       @bind-Value="newUser.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <InputText class="form-control"
+                       type="password"
+                       @bind-Value="newUser.Password" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Role</label>
+
+            <select class="form-select"
+                    @bind="newUser.Role">
+                <option value="1">Driver</option>
+                <option value="0">Admin</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary"
+                @onclick="AddUser"
+                disabled="@isSaving">
+            @(isSaving ? "Creating..." : "Create User")
+        </button>
+    </div>
+</div>
+
+<button class="btn btn-secondary"
+        @onclick="GoBack">
+    Back to Admin
+</button>
+
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">Users</h4>
+
+        @if (users.Count == 0)
+        {
+            <p>No users found.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>@user.EmployeeId</td>
+                                <td>
+                                    @user.FirstName @user.LastName
+                                </td>
+                                <td>@user.Email</td>
+                                <td>@user.Role</td>
+                                <td>
+                                    @if (user.Status == "Active")
+                                    {
+                                        <span class="badge bg-success">
+                                            Active
+                                        </span>
+                                    }
+                                    else if (user.Status == "Suspended")
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Suspended
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            @user.Status
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private CreateUserRequest newUser = new()
+    {
+        Role = 1
+    };
+
+    private string? message;
+    private bool isSaving;
+
+    private List<UserDto> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        users = await ApiService.GetUsersAsync();
+    }
+
+    private async Task AddUser()
+    {
+        message = null;
+
+        if (string.IsNullOrWhiteSpace(newUser.EmployeeId) ||
+            string.IsNullOrWhiteSpace(newUser.FirstName) ||
+            string.IsNullOrWhiteSpace(newUser.LastName) ||
+            string.IsNullOrWhiteSpace(newUser.Email) ||
+            string.IsNullOrWhiteSpace(newUser.Password))
+        {
+            message = "Please complete all fields.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var success = await ApiService.CreateUserAsync(newUser);
+
+            if (success)
+            {
+                message = "User created successfully.";
+
+                users = await ApiService.GetUsersAsync();
+
+                newUser = new CreateUserRequest
+                {
+                    Role = 1
+                };
+            }
+            else
+            {
+                message = "User could not be created. Employee ID or email may already exist.";
+            }
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+}

@@ -1,0 +1,79 @@
+@page "/driver/history"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Drive History</PageTitle>
+
+<h1>Drive History</h1>
+
+@if (driveLogs == null)
+{
+    <p>Loading drive history...</p>
+}
+else if (driveLogs.Count == 0)
+{
+    <div class="alert alert-info">
+        No completed drives found.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Drive ID</th>
+                    <th>Vehicle ID</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Start Location</th>
+                    <th>End Location</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var drive in driveLogs)
+                {
+                    <tr>
+                        <td>@drive.Id</td>
+                        <td>@drive.VehicleId</td>
+                        <td>@drive.StartTime</td>
+                        <td>@drive.EndTime</td>
+                        <td>@drive.StartLocation</td>
+                        <td>@drive.EndLocation</td>
+                        <td>@drive.Purpose</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<DriveLogDto>? driveLogs;
+
+    private int userId = 2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsDriver)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        var userId = AuthService.CurrentUser!.UserId;
+
+        var allDriveLogs = await ApiService.GetDriveLogsAsync();
+
+        driveLogs = allDriveLogs
+            .Where(d => d.UserId == userId && d.EndTime != null)
+            .OrderByDescending(d => d.StartTime)
+            .ToList();
+    }
+}

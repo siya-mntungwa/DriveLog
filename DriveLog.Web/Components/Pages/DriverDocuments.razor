@@ -1,0 +1,70 @@
+@page "/driver/documents"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>My Documents</PageTitle>
+
+<h1>My Documents</h1>
+
+@if (documents == null)
+{
+    <p>Loading documents...</p>
+}
+else if (documents.Count == 0)
+{
+    <div class="alert alert-info">
+        No documents found.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>File</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var document in documents)
+                {
+                    <tr>
+                        <td>@document.DocumentType</td>
+                        <td>@document.FileName</td>
+                        <td>@document.IssueDate.ToShortDateString()</td>
+                        <td>@document.ExpiryDate.ToShortDateString()</td>
+                        <td>@document.DocumentStatus</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<DriverDocumentDto>? documents;
+
+    private int userId = 2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsDriver)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        var userId = AuthService.CurrentUser!.UserId;
+
+        documents = await ApiService.GetDriverDocumentsAsync(userId);
+    }
+}

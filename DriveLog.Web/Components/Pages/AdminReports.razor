@@ -1,0 +1,182 @@
+@page "/admin/reports"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>DriveLog - Reports</PageTitle>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Reports</h1>
+            <p class="text-muted">
+                Generate printable drive reports for a driver or vehicle.
+            </p>
+        </div>
+
+        <button class="btn btn-secondary"
+                @onclick="GoBack">
+            Back to Dashboard
+        </button>
+    </div>
+
+    <div class="row">
+
+        <!-- Driver Report -->
+
+        <div class="col-md-6 mb-4">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h4 class="card-title">
+                        Driver Report
+                    </h4>
+
+                    <p class="text-muted">
+                        Generate a report containing all completed drives
+                        for a specific driver.
+                    </p>
+
+                    <label class="form-label">
+                        Select Driver
+                    </label>
+
+                    <select class="form-select mb-3"
+                            @bind="selectedDriverId">
+
+                        <option value="0">
+                            -- Select Driver --
+                        </option>
+
+                        @foreach (var driver in drivers)
+                        {
+                            <option value="@driver.Id">
+                                @driver.EmployeeId -
+                                @driver.FirstName @driver.LastName
+                            </option>
+                        }
+
+                    </select>
+
+                    <button class="btn btn-primary"
+                            @onclick="GenerateDriverReport"
+                            disabled="@(selectedDriverId == 0)">
+
+                        Generate Driver PDF
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Vehicle Report -->
+
+        <div class="col-md-6 mb-4">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h4 class="card-title">
+                        Vehicle Report
+                    </h4>
+
+                    <p class="text-muted">
+                        Generate a report containing all completed drives
+                        for a specific vehicle.
+                    </p>
+
+                    <label class="form-label">
+                        Select Vehicle
+                    </label>
+
+                    <select class="form-select mb-3"
+                            @bind="selectedVehicleId">
+
+                        <option value="0">
+                            -- Select Vehicle --
+                        </option>
+
+                        @foreach (var vehicle in vehicles)
+                        {
+                            <option value="@vehicle.Id">
+                                @vehicle.RegistrationNumber -
+                                @vehicle.Make @vehicle.Model
+                            </option>
+                        }
+
+                    </select>
+
+                    <button class="btn btn-primary"
+                            @onclick="GenerateVehicleReport"
+                            disabled="@(selectedVehicleId == 0)">
+
+                        Generate Vehicle PDF
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@code {
+
+    private List<DriverDto> drivers = new();
+    private List<VehicleDto> vehicles = new();
+
+    private int selectedDriverId;
+    private int selectedVehicleId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        drivers = await ApiService.GetDriversAsync();
+        vehicles = await ApiService.GetVehiclesAsync();
+    }
+
+    private void GenerateDriverReport()
+    {
+        if (selectedDriverId == 0)
+            return;
+
+        Navigation.NavigateTo(
+            $"http://localhost:5037/api/Reports/driver/{selectedDriverId}/pdf",
+            forceLoad: true);
+    }
+
+    private void GenerateVehicleReport()
+    {
+        if (selectedVehicleId == 0)
+            return;
+
+        Navigation.NavigateTo(
+            $"http://localhost:5037/api/Reports/vehicle/{selectedVehicleId}/pdf",
+            forceLoad: true);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+}

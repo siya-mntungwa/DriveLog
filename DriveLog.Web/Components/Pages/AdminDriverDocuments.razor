@@ -1,0 +1,241 @@
+@page "/admin/drivers/{id:int}/documents"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin - Driver Documents</PageTitle>
+
+<h1>Driver Documents</h1>
+
+<a href="/admin/drivers" class="btn btn-secondary mb-4">
+    ← Back to Drivers
+</a>
+
+@if (documents == null)
+{
+    <p>Loading documents...</p>
+}
+else if (documents.Count == 0)
+{
+    <div class="alert alert-info">
+        No documents found for this driver.
+    </div>
+}
+else
+{
+    ////
+    <div class="card mb-4">
+        <div class="card-body">
+
+            <h4 class="card-title">Upload Driver Document</h4>
+
+            <div class="mb-3">
+                <label class="form-label">Document Type</label>
+
+                <select class="form-select"
+                        @bind="documentType">
+                    <option value="License">Driver's Licence</option>
+                    <option value="PrDP">PrDP</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Document File</label>
+
+                <InputFile OnChange="HandleFileSelected" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Issue Date</label>
+
+                <InputDate class="form-control"
+                        @bind-Value="issueDate" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Expiry Date</label>
+
+                <InputDate class="form-control"
+                        @bind-Value="expiryDate" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(uploadMessage))
+            {
+                <div class="alert alert-info">
+                    @uploadMessage
+                </div>
+            }
+
+            <button class="btn btn-primary"
+                    @onclick="UploadDocument"
+                    disabled="@isUploading">
+                @(isUploading ? "Uploading..." : "Upload Document")
+            </button>
+
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>File</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var document in documents)
+                {
+                    <tr>
+                        <td>@document.DocumentType</td>
+                        <td>@document.FileName</td>
+                        <td>@document.IssueDate.ToShortDateString()</td>
+                        <td>@document.ExpiryDate.ToShortDateString()</td>
+                        <td>
+                            @document.DocumentStatus
+                        </td>
+
+                        <td>
+                            @if (document.DocumentStatus != "Approved")
+                            {
+                                <button class="btn btn-sm btn-success me-2"
+                                        @onclick="() => ApproveDocument(document.Id)">
+                                    Approve
+                                </button>
+                            }
+
+                            @if (document.DocumentStatus != "Rejected")
+                            {
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => RejectDocument(document.Id)">
+                                    Reject
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private List<DriverDocumentDto>? documents;
+
+    private IBrowserFile? selectedFile;
+
+    private string documentType = "License";
+
+    private DateTime issueDate = DateTime.Today;
+
+    private DateTime expiryDate = DateTime.Today.AddYears(1);
+
+    private string? uploadMessage;
+
+    private bool isUploading;
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        uploadMessage = null;
+    }
+
+    private async Task UploadDocument()
+    {
+        if (selectedFile == null)
+        {
+            uploadMessage = "Please select a document file.";
+            return;
+        }
+
+        if (expiryDate < issueDate)
+        {
+            uploadMessage = "Expiry date cannot be before issue date.";
+            return;
+        }
+
+        isUploading = true;
+        uploadMessage = null;
+
+        try
+        {
+            var success = await ApiService.UploadDriverDocumentAsync(
+                id,
+                selectedFile,
+                documentType,
+                issueDate,
+                expiryDate);
+
+            if (success)
+            {
+                uploadMessage = "Document uploaded successfully and is awaiting review.";
+
+                selectedFile = null;
+
+                documentType = "License";
+
+                issueDate = DateTime.Today;
+
+                expiryDate = DateTime.Today.AddYears(1);
+
+                documents = await ApiService.GetDriverDocumentsAsync(id);
+            }
+            else
+            {
+                uploadMessage = "Document upload failed.";
+            }
+        }
+        catch (Exception)
+        {
+            uploadMessage = "An error occurred while uploading the document.";
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        documents = await ApiService.GetDriverDocumentsAsync(id);
+    }
+
+    private async Task ApproveDocument(int documentId)
+    {
+        var success = await ApiService.ApproveDocumentAsync(documentId);
+
+        if (success)
+        {
+            documents = await ApiService.GetDriverDocumentsAsync(id);
+        }
+    }
+
+    private async Task RejectDocument(int documentId)
+    {
+        var success = await ApiService.RejectDocumentAsync(documentId);
+
+        if (success)
+        {
+            documents = await ApiService.GetDriverDocumentsAsync(id);
+        }
+    }
+}

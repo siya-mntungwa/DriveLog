@@ -1,0 +1,97 @@
+@page "/login"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>DriveLog - Login</PageTitle>
+
+<h1>DriveLog Login</h1>
+
+<div class="row">
+    <div class="col-md-6">
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+
+            <div class="mb-3">
+                <label class="form-label">Employee ID</label>
+
+                <InputText class="form-control"
+                           @bind-Value="loginModel.EmployeeId" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+
+                <InputText type="password"
+                           class="form-control"
+                           @bind-Value="loginModel.Password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary">
+                Login
+            </button>
+
+        </EditForm>
+
+    </div>
+</div>
+
+<div class="mt-4">
+    <p><strong>Demo Accounts</strong></p>
+    <p>Admin: ADM001 / DemoPassword</p>
+    <p>Driver: EMP001 / DemoPassword</p>
+</div>
+
+@code {
+
+    private LoginModel loginModel = new();
+
+    private string? errorMessage;
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+
+        var result = await ApiService.LoginAsync(
+            loginModel.EmployeeId,
+            loginModel.Password);
+
+        if (result == null)
+        {
+            errorMessage = "Invalid employee ID or password.";
+            return;
+        }
+
+        AuthService.Login(result);
+
+        if (result.Role == "Admin")
+        {
+            Navigation.NavigateTo("/admin");
+        }
+        else if (result.Role == "Driver")
+        {
+            Navigation.NavigateTo("/driver");
+        }
+        else
+        {
+            errorMessage = "Invalid user role.";
+        }
+    }
+
+    private class LoginModel
+    {
+        public string EmployeeId { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+    }
+}

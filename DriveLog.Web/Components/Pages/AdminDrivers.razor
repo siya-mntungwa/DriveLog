@@ -1,0 +1,75 @@
+@page "/admin/drivers"
+@rendermode InteractiveServer
+
+@using DriveLog.Web.Services
+@inject DriveLogApiService ApiService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin - Drivers</PageTitle>
+
+<h1>Drivers</h1>
+
+<a href="/admin" class="btn btn-secondary mb-4">
+    ← Back to Dashboard
+</a>
+
+@if (drivers == null)
+{
+    <p>Loading drivers...</p>
+}
+else if (drivers.Count == 0)
+{
+    <div class="alert alert-info">
+        No drivers found.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Documents</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var driver in drivers)
+                {
+                    <tr>
+                        <td>@driver.EmployeeId</td>
+                        <td>@driver.FirstName @driver.LastName</td>
+                        <td>@driver.Email</td>
+                        <td>@driver.Status</td>
+                        <td>
+                            <a href="/admin/drivers/@driver.Id/documents"
+                               class="btn btn-sm btn-primary">
+                                View Documents
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<DriverDto>? drivers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || !AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        drivers = await ApiService.GetDriversAsync();
+    }
+}
