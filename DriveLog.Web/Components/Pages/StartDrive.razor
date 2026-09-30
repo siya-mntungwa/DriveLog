@@ -1,13 +1,26 @@
 @page "/driver/start-drive"
+
 @rendermode InteractiveServer
+
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Start Drive</PageTitle>
 
-<h1>Start Drive</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <a href="/driver" class="btn btn-secondary">
+        ← Back to Dashboard
+    </a>
+
+    <h1 class="mb-0">Start Drive</h1>
+
+    <div style="width: 150px;"></div>
+
+</div>
 
 @if (vehicles == null)
 {
@@ -15,41 +28,111 @@
 }
 else
 {
-    <EditForm Model="request" OnValidSubmit="HandleStartDrive" FormName="StartDriveForm">
-        <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-body">
 
-        <div class="mb-3">
-            <label class="form-label">Start Location</label>
-            <InputText class="form-control"
-                       @bind-Value="request.StartLocation" />
+            <EditForm Model="driveRequest"
+                      OnValidSubmit="HandleStartDrive"
+                      FormName="StartDriveForm">
+
+                <DataAnnotationsValidator />
+
+                <div class="row">
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Vehicle
+                        </label>
+
+                        <select class="form-select"
+                                @bind="driveRequest.VehicleId">
+
+                            <option value="0">
+                                Select vehicle
+                            </option>
+
+                            @foreach (var vehicle in vehicles.Where(v => v.Status == 0))
+                            {
+                                <option value="@vehicle.Id">
+                                    @vehicle.RegistrationNumber -
+                                    @vehicle.Make @vehicle.Model
+                                </option>
+                            }
+
+                        </select>
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Customer
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="driveRequest.Customer" />
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Delivery Note ID
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="driveRequest.DeliveryNoteId" />
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Start KM
+                        </label>
+
+                        <input class="form-control"
+                               value="@GetSelectedVehicleKm()"
+                               readonly />
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Start Location
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="driveRequest.StartLocation" />
+
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+                            Purpose
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="driveRequest.Purpose" />
+
+                    </div>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary">
+
+                    Start Drive
+
+                </button>
+
+            </EditForm>
+
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">Purpose</label>
-            <InputText class="form-control"
-                       @bind-Value="request.Purpose" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Vehicle</label>
-
-            <select class="form-select" @bind="request.VehicleId">
-                <option value="0">Select a vehicle</option>
-
-                @foreach (var vehicle in vehicles.Where(v => v.Status == 0))
-                {
-                    <option value="@vehicle.Id">
-                        @vehicle.RegistrationNumber -
-                        @vehicle.Make @vehicle.Model
-                    </option>
-                }
-            </select>
-        </div>
-
-        <button type="submit" class="btn btn-primary">
-            Start Drive
-        </button>
-    </EditForm>
+    </div>
 
     @if (!string.IsNullOrEmpty(message))
     {
@@ -60,12 +143,10 @@ else
 }
 
 @code {
+
     private List<VehicleDto>? vehicles;
 
-    private StartDriveRequest request = new()
-    {
-        UserId = 2
-    };
+    private StartDriveRequest driveRequest = new();
 
     private string message = string.Empty;
 
@@ -77,14 +158,14 @@ else
             return;
         }
 
-        request.UserId = AuthService.CurrentUser!.UserId;
+        driveRequest.UserId = AuthService.CurrentUser!.UserId;
 
         vehicles = await ApiService.GetVehiclesAsync();
     }
 
     private async Task HandleStartDrive()
     {
-        var result = await ApiService.StartDriveAsync(request);
+        var result = await ApiService.StartDriveAsync(driveRequest);
 
         if (result == null)
         {
@@ -92,6 +173,17 @@ else
             return;
         }
 
-        message = $"Drive started successfully. Drive ID: {result.Id}";
+        Navigation.NavigateTo("/driver/drive");
+    }
+
+    private string GetSelectedVehicleKm()
+    {
+        if (driveRequest.VehicleId == 0)
+            return string.Empty;
+
+        var vehicle = vehicles?.FirstOrDefault(
+            v => v.Id == driveRequest.VehicleId);
+
+        return vehicle?.CurrentKm.ToString("N0") ?? string.Empty;
     }
 }

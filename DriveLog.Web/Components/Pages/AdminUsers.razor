@@ -1,14 +1,23 @@
 @page "/admin/users"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>DriveLog - Users</PageTitle>
 
-<h1>User Management</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">User Management</h1>
+
+    <button class="btn btn-outline-secondary"
+            @onclick="GoBack">
+        Back to Dashboard
+    </button>
+</div>
 
 @if (!string.IsNullOrEmpty(message))
 {
@@ -19,96 +28,155 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <h4 class="card-title">Add User</h4>
 
-        <div class="mb-3">
-            <label class="form-label">Employee ID</label>
-            <InputText class="form-control"
-                       @bind-Value="newUser.EmployeeId" />
+        <h5 class="card-title mb-3">Add User</h5>
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <label class="form-label">Employee ID</label>
+                <InputText class="form-control"
+                           @bind-Value="newUser.EmployeeId" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">First Name</label>
+                <InputText class="form-control"
+                           @bind-Value="newUser.FirstName" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Last Name</label>
+                <InputText class="form-control"
+                           @bind-Value="newUser.LastName" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Email</label>
+                <InputText class="form-control"
+                           type="email"
+                           @bind-Value="newUser.Email" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Password</label>
+                <InputText class="form-control"
+                           type="password"
+                           @bind-Value="newUser.Password" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Role</label>
+
+                <select class="form-select"
+                        @bind="newUser.Role">
+                    <option value="1">Driver</option>
+                    <option value="0">Admin</option>
+                </select>
+            </div>
+
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">First Name</label>
-            <InputText class="form-control"
-                       @bind-Value="newUser.FirstName" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Last Name</label>
-            <InputText class="form-control"
-                       @bind-Value="newUser.LastName" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <InputText class="form-control"
-                       type="email"
-                       @bind-Value="newUser.Email" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Password</label>
-            <InputText class="form-control"
-                       type="password"
-                       @bind-Value="newUser.Password" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Role</label>
-
-            <select class="form-select"
-                    @bind="newUser.Role">
-                <option value="1">Driver</option>
-                <option value="0">Admin</option>
-            </select>
-        </div>
-
-        <button class="btn btn-primary"
+        <button class="btn btn-primary mt-3"
                 @onclick="AddUser"
                 disabled="@isSaving">
+
             @(isSaving ? "Creating..." : "Create User")
+
         </button>
+
     </div>
 </div>
 
-<button class="btn btn-secondary"
-        @onclick="GoBack">
-    Back to Admin
-</button>
+@if (users.Count == 0)
+{
+    <div class="alert alert-info">
+        No users found.
+    </div>
+}
+else
+{
+    <h5 class="mb-3">Users</h5>
 
-<div class="card">
-    <div class="card-body">
-        <h4 class="card-title">Users</h4>
+    <div class="list-group">
 
-        @if (users.Count == 0)
+        @foreach (var user in users)
         {
-            <p>No users found.</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Employee ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
+            <div class="border rounded mb-2">
 
-                    <tbody>
-                        @foreach (var user in users)
-                        {
-                            <tr>
-                                <td>@user.EmployeeId</td>
-                                <td>
+                <button type="button"
+                        class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                        @onclick="() => ToggleUser(user.Id)">
+
+                    <span>
+
+                        <strong>@user.EmployeeId</strong>
+                        — @user.FirstName @user.LastName
+
+                        <span class="ms-2">
+
+                            @if (user.Status == "Active")
+                            {
+                                <span class="badge bg-success">
+                                    Active
+                                </span>
+                            }
+                            else if (user.Status == "Suspended")
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Suspended
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    @user.Status
+                                </span>
+                            }
+
+                        </span>
+
+                    </span>
+
+                    <span>
+                        @(expandedUserId == user.Id ? "▲" : "▼")
+                    </span>
+
+                </button>
+
+                @if (expandedUserId == user.Id)
+                {
+                    <div class="border-top p-3">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-4">
+                                <strong>Employee ID</strong>
+                                <div>@user.EmployeeId</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Name</strong>
+                                <div>
                                     @user.FirstName @user.LastName
-                                </td>
-                                <td>@user.Email</td>
-                                <td>@user.Role</td>
-                                <td>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Email</strong>
+                                <div>@user.Email</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Role</strong>
+                                <div>@user.Role</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Status</strong>
+
+                                <div>
+
                                     @if (user.Status == "Active")
                                     {
                                         <span class="badge bg-success">
@@ -127,26 +195,37 @@
                                             @user.Status
                                         </span>
                                     }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+
             </div>
         }
+
     </div>
-</div>
+}
 
 @code {
+
     private CreateUserRequest newUser = new()
     {
         Role = 1
     };
 
     private string? message;
+
     private bool isSaving;
 
     private List<UserDto> users = new();
+
+    private int? expandedUserId;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -158,6 +237,20 @@
 
         users = await ApiService.GetUsersAsync();
     }
+
+
+    private void ToggleUser(int userId)
+    {
+        if (expandedUserId == userId)
+        {
+            expandedUserId = null;
+        }
+        else
+        {
+            expandedUserId = userId;
+        }
+    }
+
 
     private async Task AddUser()
     {
@@ -192,7 +285,8 @@
             }
             else
             {
-                message = "User could not be created. Employee ID or email may already exist.";
+                message =
+                    "User could not be created. Employee ID or email may already exist.";
             }
         }
         finally
@@ -200,6 +294,7 @@
             isSaving = false;
         }
     }
+
 
     private void GoBack()
     {

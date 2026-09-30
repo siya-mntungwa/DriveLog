@@ -1,6 +1,5 @@
 using DriveLog.Api.DTOs;
 using DriveLog.Data.Data;
-using DriveLog.Data.Models;
 using DriveLog.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +20,10 @@ public class ReportsController : ControllerBase
         _context = context;
         _pdfService = pdfService;
     }
+
+    // =========================
+    // DRIVER REPORT
+    // =========================
 
     [HttpGet("driver/{driverId}")]
     public async Task<IActionResult> GetDriverReport(int driverId)
@@ -47,12 +50,23 @@ public class ReportsController : ControllerBase
                 EndTime = d.EndTime,
                 StartLocation = d.StartLocation,
                 EndLocation = d.EndLocation,
-                Purpose = d.purpose
+
+                Customer = d.Customer,
+                DeliveryNoteId = d.DeliveryNoteId,
+
+                StartKm = d.StartKm,
+                EndKm = d.EndKm,
+
+                Purpose = d.Purpose
             })
             .ToListAsync();
 
         return Ok(driveLogs);
     }
+
+    // =========================
+    // VEHICLE REPORT
+    // =========================
 
     [HttpGet("vehicle/{vehicleId}")]
     public async Task<IActionResult> GetVehicleReport(int vehicleId)
@@ -65,26 +79,43 @@ public class ReportsController : ControllerBase
             return NotFound("Vehicle not found.");
         }
 
-        var driveLogs = await _context.DriveLogs
-            .Where(d =>
-                d.VehicleId == vehicleId &&
-                d.EndTime != null)
-            .OrderByDescending(d => d.StartTime)
-            .Select(d => new DriveLogDto
+        var driveLogs = await (
+            from drive in _context.DriveLogs
+            join user in _context.Users
+                on drive.UserId equals user.Id
+            where drive.VehicleId == vehicleId
+                && drive.EndTime != null
+            orderby drive.StartTime descending
+            select new DriveLogDto
             {
-                Id = d.Id,
-                UserId = d.UserId,
-                VehicleId = d.VehicleId,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime,
-                StartLocation = d.StartLocation,
-                EndLocation = d.EndLocation,
-                Purpose = d.purpose
-            })
-            .ToListAsync();
+                Id = drive.Id,
+                UserId = drive.UserId,
+                VehicleId = drive.VehicleId,
+
+                StartTime = drive.StartTime,
+                EndTime = drive.EndTime,
+
+                StartLocation = drive.StartLocation,
+                EndLocation = drive.EndLocation,
+
+                Customer = drive.Customer,
+                DeliveryNoteId = drive.DeliveryNoteId,
+
+                StartKm = drive.StartKm,
+                EndKm = drive.EndKm,
+
+                Purpose = drive.Purpose,
+
+                DriverName = user.FirstName + " " + user.LastName
+            }
+        ).ToListAsync();
 
         return Ok(driveLogs);
     }
+
+    // =========================
+    // DRIVER PDF
+    // =========================
 
     [HttpGet("driver/{driverId}/pdf")]
     public async Task<IActionResult> GetDriverPdf(int driverId)
@@ -107,18 +138,26 @@ public class ReportsController : ControllerBase
                 Id = d.Id,
                 UserId = d.UserId,
                 VehicleId = d.VehicleId,
+
                 StartTime = d.StartTime,
                 EndTime = d.EndTime,
+
                 StartLocation = d.StartLocation,
                 EndLocation = d.EndLocation,
-                Purpose = d.purpose
+
+                Customer = d.Customer,
+                DeliveryNoteId = d.DeliveryNoteId,
+
+                StartKm = d.StartKm,
+                EndKm = d.EndKm,
+
+                Purpose = d.Purpose
             })
             .ToListAsync();
 
         var pdf = _pdfService.GenerateReport(
-            $"Driver Drive Report",
+            "Driver Drive Report",
             $"{driver.FirstName} {driver.LastName}",
-            driver.EmployeeId,
             "Multiple vehicles",
             driveLogs);
 
@@ -127,6 +166,10 @@ public class ReportsController : ControllerBase
             "application/pdf",
             $"Driver-{driver.EmployeeId}-DriveLog.pdf");
     }
+
+    // =========================
+    // VEHICLE PDF
+    // =========================
 
     [HttpGet("vehicle/{vehicleId}/pdf")]
     public async Task<IActionResult> GetVehiclePdf(int vehicleId)
@@ -139,28 +182,40 @@ public class ReportsController : ControllerBase
             return NotFound("Vehicle not found.");
         }
 
-        var driveLogs = await _context.DriveLogs
-            .Where(d =>
-                d.VehicleId == vehicleId &&
-                d.EndTime != null)
-            .OrderByDescending(d => d.StartTime)
-            .Select(d => new DriveLogDto
+        var driveLogs = await (
+            from drive in _context.DriveLogs
+            join user in _context.Users
+                on drive.UserId equals user.Id
+            where drive.VehicleId == vehicleId
+                && drive.EndTime != null
+            orderby drive.StartTime descending
+            select new DriveLogDto
             {
-                Id = d.Id,
-                UserId = d.UserId,
-                VehicleId = d.VehicleId,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime,
-                StartLocation = d.StartLocation,
-                EndLocation = d.EndLocation,
-                Purpose = d.purpose
-            })
-            .ToListAsync();
+                Id = drive.Id,
+                UserId = drive.UserId,
+                VehicleId = drive.VehicleId,
+
+                StartTime = drive.StartTime,
+                EndTime = drive.EndTime,
+
+                StartLocation = drive.StartLocation,
+                EndLocation = drive.EndLocation,
+
+                Customer = drive.Customer,
+                DeliveryNoteId = drive.DeliveryNoteId,
+
+                StartKm = drive.StartKm,
+                EndKm = drive.EndKm,
+
+                Purpose = drive.Purpose,
+
+                DriverName = user.FirstName + " " + user.LastName
+            }
+        ).ToListAsync();
 
         var pdf = _pdfService.GenerateReport(
             "Vehicle Drive Report",
             "Multiple drivers",
-            "N/A",
             $"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}",
             driveLogs);
 

@@ -58,11 +58,15 @@ public class DriveLogApiService
             d.UserId == userId && d.EndTime == null);
     }
 
-    public async Task<DriveLogDto?> EndDriveAsync(int driveId, string endLocation)
+    public async Task<DriveLogDto?> EndDriveAsync(
+        int driveId,
+        string endLocation,
+        int endKm)
     {
         var request = new
         {
-            EndLocation = endLocation
+            EndLocation = endLocation,
+            EndKm = endKm
         };
 
         var response = await _httpClient.PostAsJsonAsync(
@@ -70,9 +74,7 @@ public class DriveLogApiService
             request);
 
         if (!response.IsSuccessStatusCode)
-        {
             return null;
-        }
 
         return await response.Content.ReadFromJsonAsync<DriveLogDto>();
     }
@@ -87,24 +89,6 @@ public class DriveLogApiService
     {
         return await _httpClient.GetFromJsonAsync<List<DriverDocumentDto>>(
             $"api/DriverDocuments/{userId}") ?? new List<DriverDocumentDto>();
-    }
-
-    public async Task<bool> ApproveDocumentAsync(int documentId)
-    {
-        var response = await _httpClient.PutAsync(
-            $"api/DriverDocuments/{documentId}/approve",
-            null);
-
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> RejectDocumentAsync(int documentId)
-    {
-        var response = await _httpClient.PutAsync(
-            $"api/DriverDocuments/{documentId}/reject",
-            null);
-
-        return response.IsSuccessStatusCode;
     }
 
     public async Task<LoginResponse?> LoginAsync(string employeeId, string password)
@@ -237,14 +221,22 @@ public class VehicleDto
     public string Make { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public int Year { get; set; }
+    public int CurrentKm { get; set; }
     public int Status { get; set; }
 }
 
 public class StartDriveRequest
 {
     public int UserId { get; set; }
+
     public int VehicleId { get; set; }
+
     public string StartLocation { get; set; } = string.Empty;
+
+    public string Customer { get; set; } = string.Empty;
+
+    public string DeliveryNoteId { get; set; } = string.Empty;
+
     public string Purpose { get; set; } = string.Empty;
 }
 
@@ -253,11 +245,21 @@ public class DriveLogDto
     public int Id { get; set; }
     public int UserId { get; set; }
     public int VehicleId { get; set; }
+
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+
     public string StartLocation { get; set; } = string.Empty;
     public string? EndLocation { get; set; }
+
+    public string Customer { get; set; } = string.Empty;
+    public string DeliveryNoteId { get; set; } = string.Empty;
+
+    public int? StartKm { get; set; }
+    public int? EndKm { get; set; }
+
     public string Purpose { get; set; } = string.Empty;
+    public string DriverName { get; set; } = string.Empty;
 }
 
 public class DriverEligibilityDto

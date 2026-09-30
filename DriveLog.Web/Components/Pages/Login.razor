@@ -1,61 +1,81 @@
 @page "/login"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>DriveLog - Login</PageTitle>
 
-<h1>DriveLog Login</h1>
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
 
-<div class="row">
-    <div class="col-md-6">
+        <div class="text-center mb-4">
+            <h1 class="mb-2">DriveLog</h1>
+            <p class="text-muted">Fleet Management System</p>
+        </div>
 
-        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
 
-            <div class="mb-3">
-                <label class="form-label">Employee ID</label>
+                <h4 class="mb-4">Login</h4>
 
-                <InputText class="form-control"
-                           @bind-Value="loginModel.EmployeeId" />
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+
+                    <div class="mb-3">
+                        <label class="form-label">Employee ID</label>
+                        <InputText class="form-control"
+                                   @bind-Value="loginModel.EmployeeId" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <InputText type="password"
+                                   class="form-control"
+                                   @bind-Value="loginModel.Password" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            @errorMessage
+                        </div>
+                    }
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Login
+                    </button>
+
+                </EditForm>
+
             </div>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Password</label>
+        <div class="card shadow-sm mt-3">
+            <div class="card-body">
+                <h6 class="mb-3">Demo Accounts</h6>
 
-                <InputText type="password"
-                           class="form-control"
-                           @bind-Value="loginModel.Password" />
-            </div>
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Admin:</strong> ADM001 / DemoPassword
+                    </div>
 
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger">
-                    @errorMessage
+                    <div>
+                        <strong>Driver:</strong> EMP001 / DemoPassword
+                    </div>
                 </div>
-            }
-
-            <button type="submit" class="btn btn-primary">
-                Login
-            </button>
-
-        </EditForm>
+            </div>
+        </div>
 
     </div>
-</div>
-
-<div class="mt-4">
-    <p><strong>Demo Accounts</strong></p>
-    <p>Admin: ADM001 / DemoPassword</p>
-    <p>Driver: EMP001 / DemoPassword</p>
 </div>
 
 @code {
 
     private LoginModel loginModel = new();
-
     private string? errorMessage;
 
     private async Task HandleLogin()
@@ -91,7 +111,6 @@
     private class LoginModel
     {
         public string EmployeeId { get; set; } = string.Empty;
-
         public string Password { get; set; } = string.Empty;
     }
 }

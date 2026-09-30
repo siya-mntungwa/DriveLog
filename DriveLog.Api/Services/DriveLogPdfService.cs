@@ -10,7 +10,6 @@ public class DriveLogPdfService
     public byte[] GenerateReport(
         string reportTitle,
         string driverName,
-        string employeeId,
         string vehicleInfo,
         List<DriveLogDto> driveLogs)
     {
@@ -35,7 +34,8 @@ public class DriveLogPdfService
                             .SemiBold();
 
                         column.Item()
-                            .Text($"Generated: {DateTime.Now:dd MMMM yyyy HH:mm}");
+                            .Text(
+                                $"Generated: {DateTime.Now:dd MMMM yyyy HH:mm}");
                     });
 
                 page.Content()
@@ -48,13 +48,11 @@ public class DriveLogPdfService
                             .Text($"Driver: {driverName}");
 
                         column.Item()
-                            .Text($"Employee ID: {employeeId}");
-
-                        column.Item()
                             .Text($"Vehicle: {vehicleInfo}");
 
                         column.Item()
-                            .Text($"Total completed drives: {driveLogs.Count}");
+                            .Text(
+                                $"Total completed drives: {driveLogs.Count}");
 
                         column.Item()
                             .PaddingTop(15)
@@ -65,19 +63,51 @@ public class DriveLogPdfService
                                     columns.RelativeColumn(1.2f);
                                     columns.RelativeColumn(1.2f);
                                     columns.RelativeColumn(1.2f);
+                                    columns.RelativeColumn(1.4f);
+                                    columns.RelativeColumn(1.4f);
                                     columns.RelativeColumn(1.2f);
-                                    columns.RelativeColumn(1.5f);
-                                    columns.RelativeColumn(1.5f);
+                                    columns.RelativeColumn(1.2f);
+                                    columns.RelativeColumn(1.2f);
+                                    columns.RelativeColumn(1.2f);
                                 });
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().Element(HeaderStyle).Text("Start");
-                                    header.Cell().Element(HeaderStyle).Text("End");
-                                    header.Cell().Element(HeaderStyle).Text("Start Location");
-                                    header.Cell().Element(HeaderStyle).Text("End Location");
-                                    header.Cell().Element(HeaderStyle).Text("Purpose");
-                                    header.Cell().Element(HeaderStyle).Text("Duration");
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Start");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("End");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Driver");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Customer");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Delivery Note ID");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Start Location");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("End Location");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Purpose");
+
+                                    header.Cell()
+                                        .Element(HeaderStyle)
+                                        .Text("Duration");
                                 });
 
                                 foreach (var drive in driveLogs)
@@ -88,29 +118,72 @@ public class DriveLogPdfService
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text(drive.StartTime.ToLocalTime()
-                                            .ToString("dd/MM/yyyy HH:mm"));
+                                        .Text(
+                                            drive.StartTime
+                                                .ToLocalTime()
+                                                .ToString("dd/MM/yyyy HH:mm"));
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text(drive.EndTime?.ToLocalTime()
-                                            .ToString("dd/MM/yyyy HH:mm") ?? "-");
+                                        .Text(
+                                            drive.EndTime?
+                                                .ToLocalTime()
+                                                .ToString("dd/MM/yyyy HH:mm")
+                                            ?? "-");
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text(drive.StartLocation);
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.DriverName)
+                                                ? "-"
+                                                : drive.DriverName);
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text(drive.EndLocation ?? "-");
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.Customer)
+                                                ? "-"
+                                                : drive.Customer);
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text(drive.Purpose);
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.DeliveryNoteId)
+                                                ? "-"
+                                                : drive.DeliveryNoteId);
 
                                     table.Cell()
                                         .Element(CellStyle)
-                                        .Text($"{(int)duration.TotalHours}h {duration.Minutes}m");
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.StartLocation)
+                                                ? "-"
+                                                : drive.StartLocation);
+
+                                    table.Cell()
+                                        .Element(CellStyle)
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.EndLocation)
+                                                ? "-"
+                                                : drive.EndLocation);
+
+                                    table.Cell()
+                                        .Element(CellStyle)
+                                        .Text(
+                                            string.IsNullOrWhiteSpace(
+                                                drive.Purpose)
+                                                ? "-"
+                                                : drive.Purpose);
+
+                                    table.Cell()
+                                        .Element(CellStyle)
+                                        .Text(
+                                            $"{(int)duration.TotalHours}h " +
+                                            $"{duration.Minutes}m");
                                 }
                             });
                     });

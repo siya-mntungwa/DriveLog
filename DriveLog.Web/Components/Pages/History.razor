@@ -1,14 +1,24 @@
 @page "/driver/history"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Drive History</PageTitle>
 
-<h1>Drive History</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h1 class="mb-0">Drive History</h1>
+
+    <a href="/driver" class="btn btn-outline-secondary">
+        Back to Dashboard
+    </a>
+
+</div>
 
 @if (driveLogs == null)
 {
@@ -22,42 +32,112 @@ else if (driveLogs.Count == 0)
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Drive ID</th>
-                    <th>Vehicle ID</th>
-                    <th>Start Time</th>
-                    <th>End Time</th>
-                    <th>Start Location</th>
-                    <th>End Location</th>
-                    <th>Purpose</th>
-                </tr>
-            </thead>
+    <div class="d-flex flex-column gap-2">
 
-            <tbody>
-                @foreach (var drive in driveLogs)
+        @foreach (var drive in driveLogs)
+        {
+            <div class="card">
+
+                <button type="button"
+                        class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                        @onclick="() => ToggleDrive(drive.Id)">
+
+                    <strong>
+                        @($"Drive #{drive.Id} - {drive.StartTime.ToLocalTime():dd MMM yyyy HH:mm}")
+                    </strong>
+
+                    <span>
+                        @(expandedDriveId == drive.Id ? "▲" : "▼")
+                    </span>
+
+                </button>
+
+                @if (expandedDriveId == drive.Id)
                 {
-                    <tr>
-                        <td>@drive.Id</td>
-                        <td>@drive.VehicleId</td>
-                        <td>@drive.StartTime</td>
-                        <td>@drive.EndTime</td>
-                        <td>@drive.StartLocation</td>
-                        <td>@drive.EndLocation</td>
-                        <td>@drive.Purpose</td>
-                    </tr>
+                    <div class="border-top p-3">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <strong>Vehicle</strong>
+                                <div>@drive.VehicleId</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Customer</strong>
+                                <div>@drive.Customer</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Delivery Note ID</strong>
+                                <div>@drive.DeliveryNoteId</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Purpose</strong>
+                                <div>@drive.Purpose</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Start Time</strong>
+                                <div>
+                                    @drive.StartTime.ToLocalTime()
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>End Time</strong>
+                                <div>
+                                    @drive.EndTime?.ToLocalTime()
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Start KM</strong>
+                                <div>@drive.StartKm</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>End KM</strong>
+                                <div>@drive.EndKm</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Start Location</strong>
+                                <div>@drive.StartLocation</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>End Location</strong>
+                                <div>@drive.EndLocation</div>
+                            </div>
+
+                            @if (drive.StartKm.HasValue && drive.EndKm.HasValue)
+                            {
+                                <div class="col-md-6">
+                                    <strong>Distance</strong>
+                                    <div>
+                                        @(drive.EndKm.Value - drive.StartKm.Value) km
+                                    </div>
+                                </div>
+                            }
+
+                        </div>
+
+                    </div>
                 }
-            </tbody>
-        </table>
+
+            </div>
+        }
+
     </div>
 }
 
 @code {
+
     private List<DriveLogDto>? driveLogs;
 
-    private int userId = 2;
+    private int? expandedDriveId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,5 +155,13 @@ else
             .Where(d => d.UserId == userId && d.EndTime != null)
             .OrderByDescending(d => d.StartTime)
             .ToList();
+    }
+
+    private void ToggleDrive(int driveId)
+    {
+        if (expandedDriveId == driveId)
+            expandedDriveId = null;
+        else
+            expandedDriveId = driveId;
     }
 }

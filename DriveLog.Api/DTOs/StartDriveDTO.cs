@@ -8,5 +8,9 @@ public class StartDriveDto
 
     public string StartLocation { get; set; } = string.Empty;
 
+    public string Customer { get; set; } = string.Empty;
+
+    public string DeliveryNoteId { get; set; } = string.Empty;
+
     public string Purpose { get; set; } = string.Empty;
 }

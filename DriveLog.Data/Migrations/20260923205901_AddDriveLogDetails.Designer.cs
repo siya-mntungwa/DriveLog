@@ -4,6 +4,7 @@ using DriveLog.Data.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DriveLog.Data.Migrations
 {
     [DbContext(typeof(DriveLogDbContext))]
-    partial class DriveLogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923205901_AddDriveLogDetails")]
+    partial class AddDriveLogDetails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,9 +162,6 @@ namespace DriveLog.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CurrentKm")
-                        .HasColumnType("int");
 
                     b.Property<string>("Make")
                         .IsRequired()

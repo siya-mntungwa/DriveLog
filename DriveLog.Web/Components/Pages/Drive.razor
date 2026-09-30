@@ -1,14 +1,22 @@
 @page "/driver/drive"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Active Drive</PageTitle>
 
-<h1>Active Drive</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Active Drive</h1>
+
+    <a href="/driver" class="btn btn-outline-secondary">
+        Back to Dashboard
+    </a>
+</div>
 
 @if (drive == null)
 {
@@ -18,62 +26,120 @@
 }
 else
 {
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
-            <h5 class="card-title">Current Drive</h5>
 
-            <p>
-                <strong>Drive ID:</strong>
-                @drive.Id
-            </p>
+            <h5 class="card-title mb-4">
+                Current Drive
+            </h5>
 
-            <p>
-                <strong>Vehicle:</strong>
+            <div class="row g-3">
 
-                @if (vehicles != null)
-                {
-                    var vehicle = vehicles.FirstOrDefault(v => v.Id == drive.VehicleId);
+                <div class="col-md-6">
+                    <strong>Vehicle</strong>
 
-                    if (vehicle != null)
-                    {
-                        @($"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}")
-                    }
-                    else
-                    {
-                        @drive.VehicleId
-                    }
-                }
-            </p>
+                    <div>
+                        @if (vehicles != null)
+                        {
+                            var vehicle = vehicles.FirstOrDefault(
+                                v => v.Id == drive.VehicleId);
 
-            <p>
-                <strong>Start Time:</strong>
-                @drive.StartTime
-            </p>
-
-            <p>
-                <strong>Start Location:</strong>
-                @drive.StartLocation
-            </p>
-
-            <p>
-                <strong>Purpose:</strong>
-                @drive.Purpose
-            </p>
-
-            <EditForm Model="endRequest" OnValidSubmit="HandleEndDrive">
-                <div class="mb-3">
-                    <label class="form-label">End Location</label>
-
-                    <InputText class="form-control"
-                            @bind-Value="endRequest.EndLocation" />
+                            if (vehicle != null)
+                            {
+                                @($"{vehicle.RegistrationNumber} - {vehicle.Make} {vehicle.Model}")
+                            }
+                            else
+                            {
+                                @drive.VehicleId
+                            }
+                        }
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-danger">
+                <div class="col-md-6">
+                    <strong>Customer</strong>
+                    <div>@drive.Customer</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Delivery Note ID</strong>
+                    <div>@drive.DeliveryNoteId</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Start Time</strong>
+                    <div>@drive.StartTime</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Start KM</strong>
+                    <div>@drive.StartKm</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Start Location</strong>
+                    <div>@drive.StartLocation</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Purpose</strong>
+                    <div>@drive.Purpose</div>
+                </div>
+
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-3">
+                End Drive
+            </h5>
+
+            <EditForm Model="endRequest"
+                      OnValidSubmit="HandleEndDrive">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            End Location
+                        </label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="endRequest.EndLocation" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            End KM
+                        </label>
+
+                        <InputNumber class="form-control"
+                                     @bind-Value="endRequest.EndKm" />
+                    </div>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-danger mt-3">
                     End Drive
                 </button>
+
             </EditForm>
+
         </div>
     </div>
+}
+
+@if (!string.IsNullOrEmpty(endMessage))
+{
+    <div class="alert alert-success mt-3">
+        @endMessage
+    </div>
+
+    <a href="/driver/start-drive"
+       class="btn btn-primary">
+        Start Another Drive
+    </a>
 }
 
 @if (!string.IsNullOrEmpty(message))
@@ -84,14 +150,16 @@ else
 }
 
 @code {
+
     private DriveLogDto? drive;
+
     private List<VehicleDto>? vehicles;
 
-    private int userId = 2;
-
-    private string endLocation = string.Empty;
-
     private string message = string.Empty;
+
+    private string? endMessage;
+
+    private EndDriveForm endRequest = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,35 +172,41 @@ else
         var userId = AuthService.CurrentUser!.UserId;
 
         drive = await ApiService.GetActiveDriveAsync(userId);
+
         vehicles = await ApiService.GetVehiclesAsync();
     }
 
     private async Task HandleEndDrive()
     {
         if (drive == null)
-        {
             return;
-        }
+
+        // Clear any previous error message.
+        message = string.Empty;
+        endMessage = null;
 
         var result = await ApiService.EndDriveAsync(
             drive.Id,
-            endRequest.EndLocation);
+            endRequest.EndLocation,
+            endRequest.EndKm);
 
         if (result == null)
         {
-            message = "Unable to end the drive.";
+            message =
+                "Unable to end the drive. Check that the End KM is valid.";
+
             return;
         }
 
-        message = "Drive ended successfully.";
+        endMessage = "Drive ended successfully.";
 
         drive = null;
     }
 
-    private EndDriveForm endRequest = new();
-
     private class EndDriveForm
     {
         public string EndLocation { get; set; } = string.Empty;
+
+        public int EndKm { get; set; }
     }
 }

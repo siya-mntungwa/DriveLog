@@ -1,14 +1,24 @@
 @page "/driver/documents"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>My Documents</PageTitle>
 
-<h1>My Documents</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h1 class="mb-0">My Documents</h1>
+
+    <a href="/driver" class="btn btn-outline-secondary">
+        Back to Dashboard
+    </a>
+
+</div>
 
 @if (documents == null)
 {
@@ -22,38 +32,122 @@ else if (documents.Count == 0)
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Document</th>
-                    <th>File</th>
-                    <th>Issue Date</th>
-                    <th>Expiry Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
+    <div class="d-flex flex-column gap-2">
 
-            <tbody>
-                @foreach (var document in documents)
+        @foreach (var document in documents)
+        {
+            <div class="card">
+
+                <button type="button"
+                        class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                        @onclick="() => ToggleDocument(document.Id)">
+
+                    <div>
+                        <strong>@document.DocumentType</strong>
+
+                        <span class="ms-2">
+
+                            @if (document.DocumentStatus == "Approved")
+                            {
+                                <span class="badge bg-success">
+                                    Approved
+                                </span>
+                            }
+                            else if (document.DocumentStatus == "Pending")
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Pending
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    @document.DocumentStatus
+                                </span>
+                            }
+
+                        </span>
+                    </div>
+
+                    <span>
+                        @(expandedDocumentId == document.Id ? "▲" : "▼")
+                    </span>
+
+                </button>
+
+                @if (expandedDocumentId == document.Id)
                 {
-                    <tr>
-                        <td>@document.DocumentType</td>
-                        <td>@document.FileName</td>
-                        <td>@document.IssueDate.ToShortDateString()</td>
-                        <td>@document.ExpiryDate.ToShortDateString()</td>
-                        <td>@document.DocumentStatus</td>
-                    </tr>
+                    <div class="border-top p-3">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-4">
+                                <strong>Document</strong>
+                                <div>@document.DocumentType</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>File</strong>
+                                <div>@document.FileName</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Status</strong>
+
+                                <div>
+                                    @if (document.DocumentStatus == "Approved")
+                                    {
+                                        <span class="badge bg-success">
+                                            Approved
+                                        </span>
+                                    }
+                                    else if (document.DocumentStatus == "Pending")
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Pending
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            @document.DocumentStatus
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Issue Date</strong>
+
+                                <div>
+                                    @document.IssueDate.ToShortDateString()
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Expiry Date</strong>
+
+                                <div>
+                                    @document.ExpiryDate.ToShortDateString()
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
                 }
-            </tbody>
-        </table>
+
+            </div>
+        }
+
     </div>
 }
 
 @code {
+
     private List<DriverDocumentDto>? documents;
 
-    private int userId = 2;
+    private int? expandedDocumentId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,5 +160,13 @@ else
         var userId = AuthService.CurrentUser!.UserId;
 
         documents = await ApiService.GetDriverDocumentsAsync(userId);
+    }
+
+    private void ToggleDocument(int documentId)
+    {
+        if (expandedDocumentId == documentId)
+            expandedDocumentId = null;
+        else
+            expandedDocumentId = documentId;
     }
 }

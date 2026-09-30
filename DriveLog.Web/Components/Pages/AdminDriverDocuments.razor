@@ -1,4 +1,6 @@
+
 @page "/admin/drivers/{id:int}/documents"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
@@ -10,126 +12,160 @@
 
 <PageTitle>Admin - Driver Documents</PageTitle>
 
-<h1>Driver Documents</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Driver Documents</h1>
 
-<a href="/admin/drivers" class="btn btn-secondary mb-4">
-    ← Back to Drivers
-</a>
+    <a href="/admin/drivers" class="btn btn-outline-secondary">
+        Back to Drivers
+    </a>
+</div>
 
 @if (documents == null)
 {
     <p>Loading documents...</p>
 }
-else if (documents.Count == 0)
-{
-    <div class="alert alert-info">
-        No documents found for this driver.
-    </div>
-}
 else
 {
-    ////
     <div class="card mb-4">
         <div class="card-body">
 
-            <h4 class="card-title">Upload Driver Document</h4>
+            <h5 class="card-title mb-3">Upload Driver Document</h5>
 
-            <div class="mb-3">
-                <label class="form-label">Document Type</label>
+            <div class="row g-3">
 
-                <select class="form-select"
-                        @bind="documentType">
-                    <option value="License">Driver's Licence</option>
-                    <option value="PrDP">PrDP</option>
-                </select>
-            </div>
+                <div class="col-md-4">
+                    <label class="form-label">Document Type</label>
 
-            <div class="mb-3">
-                <label class="form-label">Document File</label>
+                    <select class="form-select"
+                            @bind="documentType">
 
-                <InputFile OnChange="HandleFileSelected" />
-            </div>
+                        <option value="License">Driver's Licence</option>
+                        <option value="PrDP">PrDP</option>
 
-            <div class="mb-3">
-                <label class="form-label">Issue Date</label>
+                    </select>
+                </div>
 
-                <InputDate class="form-control"
-                        @bind-Value="issueDate" />
-            </div>
+                <div class="col-md-4">
+                    <label class="form-label">Document File</label>
 
-            <div class="mb-3">
-                <label class="form-label">Expiry Date</label>
+                    <InputFile OnChange="HandleFileSelected"
+                               class="form-control" />
+                </div>
 
-                <InputDate class="form-control"
-                        @bind-Value="expiryDate" />
+                <div class="col-md-2">
+                    <label class="form-label">Issue Date</label>
+
+                    <InputDate class="form-control"
+                               @bind-Value="issueDate" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Expiry Date</label>
+
+                    <InputDate class="form-control"
+                               @bind-Value="expiryDate" />
+                </div>
+
             </div>
 
             @if (!string.IsNullOrEmpty(uploadMessage))
             {
-                <div class="alert alert-info">
+                <div class="alert alert-info mt-3">
                     @uploadMessage
                 </div>
             }
 
-            <button class="btn btn-primary"
+            <button class="btn btn-primary mt-3"
                     @onclick="UploadDocument"
                     disabled="@isUploading">
+
                 @(isUploading ? "Uploading..." : "Upload Document")
+
             </button>
 
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Document</th>
-                    <th>File</th>
-                    <th>Issue Date</th>
-                    <th>Expiry Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
+    @if (documents.Count == 0)
+    {
+        <div class="alert alert-info">
+            No documents found for this driver.
+        </div>
+    }
+    else
+    {
+        <h5 class="mb-3">Documents</h5>
 
-            <tbody>
-                @foreach (var document in documents)
-                {
-                    <tr>
-                        <td>@document.DocumentType</td>
-                        <td>@document.FileName</td>
-                        <td>@document.IssueDate.ToShortDateString()</td>
-                        <td>@document.ExpiryDate.ToShortDateString()</td>
-                        <td>
-                            @document.DocumentStatus
-                        </td>
+        <div class="d-flex flex-column gap-2">
 
-                        <td>
-                            @if (document.DocumentStatus != "Approved")
-                            {
-                                <button class="btn btn-sm btn-success me-2"
-                                        @onclick="() => ApproveDocument(document.Id)">
-                                    Approve
-                                </button>
-                            }
+            @foreach (var document in documents)
+            {
+                <div class="card">
 
-                            @if (document.DocumentStatus != "Rejected")
-                            {
-                                <button class="btn btn-sm btn-danger"
-                                        @onclick="() => RejectDocument(document.Id)">
-                                    Reject
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                    <button type="button"
+                            class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                            @onclick="() => ToggleDocument(document.Id)">
+
+                        <span>
+                            @document.DocumentType —
+                            @document.FileName
+                        </span>
+
+                        <span>
+                            @(expandedDocumentId == document.Id ? "▲" : "▼")
+                        </span>
+
+                    </button>
+
+                    @if (expandedDocumentId == document.Id)
+                    {
+                        <div class="border-top p-3">
+
+                            <div class="row g-3">
+
+                                <div class="col-md-6">
+                                    <strong>Document Type</strong>
+                                    <div>@document.DocumentType</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <strong>Status</strong>
+                                    <div>@document.DocumentStatus</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <strong>File</strong>
+                                    <div>@document.FileName</div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <strong>Issue Date</strong>
+                                    <div>
+                                        @document.IssueDate.ToShortDateString()
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <strong>Expiry Date</strong>
+                                    <div>
+                                        @document.ExpiryDate.ToShortDateString()
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+            }
+
+        </div>
+    }
 }
 
 @code {
+
     [Parameter]
     public int id { get; set; }
 
@@ -146,6 +182,20 @@ else
     private string? uploadMessage;
 
     private bool isUploading;
+
+    private int? expandedDocumentId;
+
+    private void ToggleDocument(int documentId)
+    {
+        if (expandedDocumentId == documentId)
+        {
+            expandedDocumentId = null;
+        }
+        else
+        {
+            expandedDocumentId = documentId;
+        }
+    }
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
     {
@@ -181,7 +231,7 @@ else
 
             if (success)
             {
-                uploadMessage = "Document uploaded successfully and is awaiting review.";
+                uploadMessage = "Document uploaded successfully.";
 
                 selectedFile = null;
 
@@ -200,7 +250,8 @@ else
         }
         catch (Exception)
         {
-            uploadMessage = "An error occurred while uploading the document.";
+            uploadMessage =
+                "An error occurred while uploading the document.";
         }
         finally
         {
@@ -217,25 +268,5 @@ else
         }
 
         documents = await ApiService.GetDriverDocumentsAsync(id);
-    }
-
-    private async Task ApproveDocument(int documentId)
-    {
-        var success = await ApiService.ApproveDocumentAsync(documentId);
-
-        if (success)
-        {
-            documents = await ApiService.GetDriverDocumentsAsync(id);
-        }
-    }
-
-    private async Task RejectDocument(int documentId)
-    {
-        var success = await ApiService.RejectDocumentAsync(documentId);
-
-        if (success)
-        {
-            documents = await ApiService.GetDriverDocumentsAsync(id);
-        }
     }
 }

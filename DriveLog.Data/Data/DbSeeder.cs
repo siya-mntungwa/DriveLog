@@ -62,7 +62,7 @@ public static class DbSeeder
                     Make = "Ford",
                     Model = "Ranger",
                     Year = 2023,
-                    Status = VehicleStatus.InUse
+                    Status = VehicleStatus.Available
                 },
 
                 new Vehicle
@@ -71,7 +71,7 @@ public static class DbSeeder
                     Make = "Isuzu",
                     Model = "D-Max",
                     Year = 2022,
-                    Status = VehicleStatus.Inactive
+                    Status = VehicleStatus.Available
                 }
             };
 

@@ -1,18 +1,23 @@
+
 @page "/admin/drivers"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Admin - Drivers</PageTitle>
 
-<h1>Drivers</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Drivers</h1>
 
-<a href="/admin" class="btn btn-secondary mb-4">
-    ← Back to Dashboard
-</a>
+    <a href="/admin" class="btn btn-outline-secondary">
+        Back to Dashboard
+    </a>
+</div>
 
 @if (drivers == null)
 {
@@ -26,41 +31,78 @@ else if (drivers.Count == 0)
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Employee ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Documents</th>
-                </tr>
-            </thead>
+    <div class="list-group">
 
-            <tbody>
-                @foreach (var driver in drivers)
+        @foreach (var driver in drivers)
+        {
+            <div class="border rounded mb-2">
+
+                <button type="button"
+                        class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                        @onclick="() => ToggleDriver(driver.Id)">
+
+                    <span>
+                        <strong>@driver.EmployeeId</strong>
+                        — @driver.FirstName @driver.LastName
+                    </span>
+
+                    <span>
+                        @(expandedDriverId == driver.Id ? "▲" : "▼")
+                    </span>
+
+                </button>
+
+                @if (expandedDriverId == driver.Id)
                 {
-                    <tr>
-                        <td>@driver.EmployeeId</td>
-                        <td>@driver.FirstName @driver.LastName</td>
-                        <td>@driver.Email</td>
-                        <td>@driver.Status</td>
-                        <td>
-                            <a href="/admin/drivers/@driver.Id/documents"
-                               class="btn btn-sm btn-primary">
-                                View Documents
-                            </a>
-                        </td>
-                    </tr>
+                    <div class="border-top p-3">
+
+                        <div class="row g-3">
+
+                            <div class="col-md-4">
+                                <strong>Employee ID</strong>
+                                <div>@driver.EmployeeId</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Name</strong>
+                                <div>
+                                    @driver.FirstName @driver.LastName
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <strong>Status</strong>
+                                <div>@driver.Status</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <strong>Email</strong>
+                                <div>@driver.Email</div>
+                            </div>
+
+                            <div class="col-md-6 d-flex align-items-end">
+                                <a href="/admin/drivers/@driver.Id/documents"
+                                   class="btn btn-primary">
+                                    View Documents
+                                </a>
+                            </div>
+
+                        </div>
+
+                    </div>
                 }
-            </tbody>
-        </table>
+
+            </div>
+        }
+
     </div>
 }
 
 @code {
+
     private List<DriverDto>? drivers;
+
+    private int? expandedDriverId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,5 +113,17 @@ else
         }
 
         drivers = await ApiService.GetDriversAsync();
+    }
+
+    private void ToggleDriver(int driverId)
+    {
+        if (expandedDriverId == driverId)
+        {
+            expandedDriverId = null;
+        }
+        else
+        {
+            expandedDriverId = driverId;
+        }
     }
 }

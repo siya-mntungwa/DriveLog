@@ -22,16 +22,20 @@ public class DriveLogsController : ControllerBase
     public async Task<IActionResult> GetDriveLogs()
     {
         var driveLogs = await _context.DriveLogs.Select(d => new DriveLogDto
-            {
-                Id = d.Id,
-                UserId = d.UserId,
-                VehicleId = d.VehicleId,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime,
-                StartLocation = d.StartLocation,
-                EndLocation = d.EndLocation,
-                Purpose = d.purpose
-            }).ToListAsync();
+        {
+            Id = d.Id,
+            UserId = d.UserId,
+            VehicleId = d.VehicleId,
+            StartTime = d.StartTime,
+            EndTime = d.EndTime,
+            StartLocation = d.StartLocation,
+            EndLocation = d.EndLocation,
+            Customer = d.Customer,
+            DeliveryNoteId = d.DeliveryNoteId,
+            StartKm = d.StartKm,
+            EndKm = d.EndKm,
+            Purpose = d.Purpose
+        }).ToListAsync();
 
         return Ok(driveLogs);
     }
@@ -101,11 +105,14 @@ public class DriveLogsController : ControllerBase
 
         var driveLog = new DriveLogEntry
         {
-            UserId = driver.Id,
-            VehicleId = vehicle.Id,
+            UserId = request.UserId,
+            VehicleId = request.VehicleId,
             StartTime = DateTime.UtcNow,
             StartLocation = request.StartLocation,
-            purpose = request.Purpose
+            Customer = request.Customer,
+            DeliveryNoteId = request.DeliveryNoteId,
+            StartKm = vehicle.CurrentKm,
+            Purpose = request.Purpose
         };
 
         vehicle.Status = VehicleStatus.InUse;
@@ -123,7 +130,11 @@ public class DriveLogsController : ControllerBase
             EndTime = driveLog.EndTime,
             StartLocation = driveLog.StartLocation,
             EndLocation = driveLog.EndLocation,
-            Purpose = driveLog.purpose
+            Customer = driveLog.Customer,
+            DeliveryNoteId = driveLog.DeliveryNoteId,
+            StartKm = driveLog.StartKm,
+            EndKm = driveLog.EndKm,
+            Purpose = driveLog.Purpose
         };
 
         return Ok(driveLogDto);
@@ -151,9 +162,24 @@ public class DriveLogsController : ControllerBase
             return NotFound("Vehicle not found.");
         }
 
+        if (request.EndKm < vehicle.CurrentKm)
+        {
+            return BadRequest(
+                "End KM cannot be less than the vehicle's current KM.");
+        }
+
+        if (driveLog.StartKm.HasValue &&
+            request.EndKm < driveLog.StartKm.Value)
+        {
+            return BadRequest(
+                "End KM cannot be less than Start KM.");
+        }
+
         driveLog.EndTime = DateTime.UtcNow;
         driveLog.EndLocation = request.EndLocation;
-
+        driveLog.EndKm = request.EndKm;
+        
+        vehicle.CurrentKm = request.EndKm;
         vehicle.Status = VehicleStatus.Available;
 
         await _context.SaveChangesAsync();
@@ -167,7 +193,11 @@ public class DriveLogsController : ControllerBase
             EndTime = driveLog.EndTime,
             StartLocation = driveLog.StartLocation,
             EndLocation = driveLog.EndLocation,
-            Purpose = driveLog.purpose
+            Customer = driveLog.Customer,
+            DeliveryNoteId = driveLog.DeliveryNoteId,
+            StartKm = driveLog.StartKm,
+            EndKm = driveLog.EndKm,
+            Purpose = driveLog.Purpose
         };
 
         return Ok(driveLogDto);

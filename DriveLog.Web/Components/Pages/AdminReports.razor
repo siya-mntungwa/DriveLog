@@ -1,134 +1,114 @@
 @page "/admin/reports"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>DriveLog - Reports</PageTitle>
 
-<div class="container mt-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Reports</h1>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1>Reports</h1>
-            <p class="text-muted">
-                Generate printable drive reports for a driver or vehicle.
-            </p>
+    <button class="btn btn-outline-secondary"
+            @onclick="GoBack">
+        Back to Dashboard
+    </button>
+</div>
+
+<p class="text-muted mb-4">
+    Generate printable drive reports for a driver or vehicle.
+</p>
+
+<div class="row g-4">
+
+    <!-- Driver Report -->
+    <div class="col-md-6">
+
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">
+                    Driver Report
+                </h5>
+
+                <label class="form-label">
+                    Select Driver
+                </label>
+
+                <select class="form-select mb-3"
+                        @bind="selectedDriverId">
+
+                    <option value="0">
+                        -- Select Driver --
+                    </option>
+
+                    @foreach (var driver in drivers)
+                    {
+                        <option value="@driver.Id">
+                            @driver.EmployeeId -
+                            @driver.FirstName @driver.LastName
+                        </option>
+                    }
+
+                </select>
+
+                <button class="btn btn-primary"
+                        @onclick="GenerateDriverReport"
+                        disabled="@(selectedDriverId == 0)">
+
+                    Generate Driver PDF
+
+                </button>
+
+            </div>
         </div>
 
-        <button class="btn btn-secondary"
-                @onclick="GoBack">
-            Back to Dashboard
-        </button>
     </div>
 
-    <div class="row">
+    <!-- Vehicle Report -->
+    <div class="col-md-6">
 
-        <!-- Driver Report -->
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
 
-        <div class="col-md-6 mb-4">
+                <h5 class="card-title mb-3">
+                    Vehicle Report
+                </h5>
 
-            <div class="card shadow-sm h-100">
+                <label class="form-label">
+                    Select Vehicle
+                </label>
 
-                <div class="card-body">
+                <select class="form-select mb-3"
+                        @bind="selectedVehicleId">
 
-                    <h4 class="card-title">
-                        Driver Report
-                    </h4>
+                    <option value="0">
+                        -- Select Vehicle --
+                    </option>
 
-                    <p class="text-muted">
-                        Generate a report containing all completed drives
-                        for a specific driver.
-                    </p>
-
-                    <label class="form-label">
-                        Select Driver
-                    </label>
-
-                    <select class="form-select mb-3"
-                            @bind="selectedDriverId">
-
-                        <option value="0">
-                            -- Select Driver --
+                    @foreach (var vehicle in vehicles)
+                    {
+                        <option value="@vehicle.Id">
+                            @vehicle.RegistrationNumber -
+                            @vehicle.Make @vehicle.Model
                         </option>
+                    }
 
-                        @foreach (var driver in drivers)
-                        {
-                            <option value="@driver.Id">
-                                @driver.EmployeeId -
-                                @driver.FirstName @driver.LastName
-                            </option>
-                        }
+                </select>
 
-                    </select>
+                <button class="btn btn-primary"
+                        @onclick="GenerateVehicleReport"
+                        disabled="@(selectedVehicleId == 0)">
 
-                    <button class="btn btn-primary"
-                            @onclick="GenerateDriverReport"
-                            disabled="@(selectedDriverId == 0)">
+                    Generate Vehicle PDF
 
-                        Generate Driver PDF
-
-                    </button>
-
-                </div>
+                </button>
 
             </div>
-
-        </div>
-
-
-        <!-- Vehicle Report -->
-
-        <div class="col-md-6 mb-4">
-
-            <div class="card shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <h4 class="card-title">
-                        Vehicle Report
-                    </h4>
-
-                    <p class="text-muted">
-                        Generate a report containing all completed drives
-                        for a specific vehicle.
-                    </p>
-
-                    <label class="form-label">
-                        Select Vehicle
-                    </label>
-
-                    <select class="form-select mb-3"
-                            @bind="selectedVehicleId">
-
-                        <option value="0">
-                            -- Select Vehicle --
-                        </option>
-
-                        @foreach (var vehicle in vehicles)
-                        {
-                            <option value="@vehicle.Id">
-                                @vehicle.RegistrationNumber -
-                                @vehicle.Make @vehicle.Model
-                            </option>
-                        }
-
-                    </select>
-
-                    <button class="btn btn-primary"
-                            @onclick="GenerateVehicleReport"
-                            disabled="@(selectedVehicleId == 0)">
-
-                        Generate Vehicle PDF
-
-                    </button>
-
-                </div>
-
-            </div>
-
         </div>
 
     </div>

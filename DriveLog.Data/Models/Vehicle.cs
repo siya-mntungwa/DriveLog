@@ -15,4 +15,6 @@ public class Vehicle
     public int Year { get; set; }
 
     public VehicleStatus Status { get; set; }
+
+    public int CurrentKm { get; set; }
 }

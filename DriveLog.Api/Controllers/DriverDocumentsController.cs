@@ -18,29 +18,14 @@ public class DriverDocumentsController : ControllerBase
         _context = context;
     }
 
+    // ==========================================
+    // GET ALL DRIVER DOCUMENTS
+    // ==========================================
+
     [HttpGet]
     public async Task<IActionResult> GetDriverDocuments()
     {
-        var driverDocuments = await _context.DriveDocuments.Select(d => new DriverDocumentDto
-        {
-            Id = d.Id,
-            UserId = d.UserId,
-            DocumentType = d.DocumentType.ToString(),
-            FileName = d.FileName,
-            IssueDate = d.IssueDate,
-            ExpiryDate = d.ExpiryDate,
-            DocumentStatus = d.DocumentStatus.ToString(),
-            IsCurrent = d.IsCurrent
-        }).ToListAsync();
-
-        return Ok(driverDocuments);
-    }
-
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetDriverDocumentsByDriver(int userId)
-    {
         var driverDocuments = await _context.DriveDocuments
-            .Where(d => d.UserId == userId)
             .Select(d => new DriverDocumentDto
             {
                 Id = d.Id,
@@ -57,61 +42,46 @@ public class DriverDocumentsController : ControllerBase
         return Ok(driverDocuments);
     }
 
-    [HttpPut("{id}/approve")]
-    public async Task<IActionResult> ApproveDocument(int id)
+    // ==========================================
+    // GET DOCUMENTS FOR A DRIVER
+    // ==========================================
+
+    [HttpGet("{userId}")]
+    public async Task<IActionResult> GetDriverDocumentsByDriver(int userId)
     {
-        var document = await _context.DriveDocuments
-            .FirstOrDefaultAsync(d => d.Id == id);
-
-        if (document == null)
-        {
-            return NotFound("Document not found.");
-        }
-
-        var currentDocuments = await _context.DriveDocuments
-            .Where(d =>
-                d.UserId == document.UserId &&
-                d.DocumentType == document.DocumentType &&
-                d.IsCurrent &&
-                d.Id != document.Id)
+        var driverDocuments = await _context.DriveDocuments
+            .Where(d => d.UserId == userId)
+            .OrderByDescending(d => d.IsCurrent)
+            .ThenByDescending(d => d.ExpiryDate)
+            .Select(d => new DriverDocumentDto
+            {
+                Id = d.Id,
+                UserId = d.UserId,
+                DocumentType = d.DocumentType.ToString(),
+                FileName = d.FileName,
+                IssueDate = d.IssueDate,
+                ExpiryDate = d.ExpiryDate,
+                DocumentStatus = d.DocumentStatus.ToString(),
+                IsCurrent = d.IsCurrent
+            })
             .ToListAsync();
 
-        foreach (var currentDocument in currentDocuments)
-        {
-            currentDocument.IsCurrent = false;
-        }
-
-        document.DocumentStatus = DocumentStatus.Approved;
-        document.IsCurrent = true;
-
-        await _context.SaveChangesAsync();
-
-        return Ok("Document approved successfully.");
+        return Ok(driverDocuments);
     }
 
-    [HttpPut("{id}/reject")]
-    public async Task<IActionResult> RejectDocument(int id)
-    {
-        var document = await _context.DriveDocuments
-            .FirstOrDefaultAsync(d => d.Id == id);
-
-        if (document == null)
-        {
-            return NotFound("Document not found.");
-        }
-
-        document.DocumentStatus = DocumentStatus.Rejected;
-
-        await _context.SaveChangesAsync();
-
-        return Ok("Document rejected successfully.");
-    }
+    // ==========================================
+    // UPLOAD DRIVER DOCUMENT
+    // ==========================================
 
     [HttpPost("{userId}/upload")]
     public async Task<IActionResult> UploadDocument(
         int userId,
         [FromForm] UploadDriverDocumentDto request)
     {
+        // ------------------------------------------
+        // Check driver
+        // ------------------------------------------
+
         var driver = await _context.Users
             .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -125,15 +95,48 @@ public class DriverDocumentsController : ControllerBase
             return BadRequest("User is not a driver.");
         }
 
+        // ------------------------------------------
+        // Validate file
+        // ------------------------------------------
+
         if (request.File == null || request.File.Length == 0)
         {
             return BadRequest("A document file is required.");
         }
 
+        // ------------------------------------------
+        // Validate dates
+        // ------------------------------------------
+
         if (request.ExpiryDate < request.IssueDate)
         {
-            return BadRequest("Expiry date cannot be before issue date.");
+            return BadRequest(
+                "Expiry date cannot be before issue date.");
         }
+
+        // ------------------------------------------
+        // Find current document of same type
+        // ------------------------------------------
+
+        var existingCurrentDocument =
+            await _context.DriveDocuments
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId &&
+                    d.DocumentType == request.DocumentType &&
+                    d.IsCurrent);
+
+        // ------------------------------------------
+        // Mark old document as no longer current
+        // ------------------------------------------
+
+        if (existingCurrentDocument != null)
+        {
+            existingCurrentDocument.IsCurrent = false;
+        }
+
+        // ------------------------------------------
+        // Save uploaded file
+        // ------------------------------------------
 
         var uploadsFolder = Path.Combine(
             Directory.GetCurrentDirectory(),
@@ -142,9 +145,12 @@ public class DriverDocumentsController : ControllerBase
 
         Directory.CreateDirectory(uploadsFolder);
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(request.File.FileName)}";
+        var fileName =
+            $"{Guid.NewGuid()}{Path.GetExtension(request.File.FileName)}";
 
-        var filePath = Path.Combine(uploadsFolder, fileName);
+        var filePath = Path.Combine(
+            uploadsFolder,
+            fileName);
 
         await using (var stream = new FileStream(
             filePath,
@@ -153,6 +159,10 @@ public class DriverDocumentsController : ControllerBase
             await request.File.CopyToAsync(stream);
         }
 
+        // ------------------------------------------
+        // Create new document
+        // ------------------------------------------
+
         var document = new DriverDocument
         {
             UserId = driver.Id,
@@ -160,13 +170,21 @@ public class DriverDocumentsController : ControllerBase
             FileName = request.File.FileName,
             IssueDate = request.IssueDate,
             ExpiryDate = request.ExpiryDate,
-            DocumentStatus = DocumentStatus.Pending,
-            IsCurrent = false
+
+            // Documents are automatically approved
+            DocumentStatus = DocumentStatus.Approved,
+
+            // New document becomes the current document
+            IsCurrent = true
         };
 
         _context.DriveDocuments.Add(document);
 
         await _context.SaveChangesAsync();
+
+        // ------------------------------------------
+        // Return uploaded document
+        // ------------------------------------------
 
         return Ok(new DriverDocumentDto
         {
@@ -180,5 +198,4 @@ public class DriverDocumentsController : ControllerBase
             IsCurrent = document.IsCurrent
         });
     }
-
 }

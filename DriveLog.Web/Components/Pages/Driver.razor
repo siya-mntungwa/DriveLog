@@ -1,62 +1,84 @@
 @page "/driver"
+
 @rendermode InteractiveServer
 
 @using DriveLog.Web.Services
+
 @inject DriveLogApiService ApiService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Driver Dashboard</PageTitle>
 
-<h1>Driver Dashboard</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Driver Dashboard</h1>
+
+    <button class="btn btn-outline-danger"
+            @onclick="Logout">
+        Logout
+    </button>
+</div>
 
 @if (currentDriver != null)
 {
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">
+
+            <h5 class="card-title mb-3">
                 Welcome, @currentDriver.FirstName @currentDriver.LastName
             </h5>
 
-            <p class="mb-1">
-                <strong>Employee ID:</strong>
-                @currentDriver.EmployeeId
-            </p>
+            <div class="row g-3">
 
-            <p class="mb-1">
-                <strong>Email:</strong>
-                @currentDriver.Email
-            </p>
+                <div class="col-md-4">
+                    <strong>Employee ID</strong>
+                    <div>@currentDriver.EmployeeId</div>
+                </div>
 
-            <p class="mb-0">
-                <strong>Status:</strong>
-                @currentDriver.Status
-            </p>
+                <div class="col-md-4">
+                    <strong>Email</strong>
+                    <div>@currentDriver.Email</div>
+                </div>
+
+                <div class="col-md-4">
+                    <strong>Status</strong>
+                    <div>@currentDriver.Status</div>
+                </div>
+
+            </div>
+
         </div>
     </div>
 }
 
-<button class="btn btn-outline-danger mb-4"
-        @onclick="Logout">
-    Logout
-</button>
-
 <div class="mb-4">
-    <a href="/driver/start-drive" class="btn btn-primary me-2">
-        Start Drive
-    </a>
 
-    <a href="/driver/drive" class="btn btn-secondary me-2">
-        Active Drive
-    </a>
+    <h5 class="mb-3">Driver Actions</h5>
 
-    <a href="/driver/documents" class="btn btn-outline-secondary">
-        My Documents
-    </a>
+    <div class="d-flex flex-wrap gap-2">
 
-    <a href="/driver/history" class="btn btn-outline-secondary">
-        Drive History
-    </a>
+        <a href="/driver/start-drive"
+           class="btn btn-primary">
+            Start Drive
+        </a>
+
+        <a href="/driver/drive"
+           class="btn btn-secondary">
+            Active Drive
+        </a>
+
+        <a href="/driver/documents"
+           class="btn btn-outline-secondary">
+            My Documents
+        </a>
+
+        <a href="/driver/history"
+           class="btn btn-outline-secondary">
+            Drive History
+        </a>
+
+    </div>
+
 </div>
 
 @if (eligibility == null)
@@ -65,56 +87,30 @@
 }
 else if (eligibility.IsEligible)
 {
-    <div class="alert alert-success">
+    <div class="alert alert-success mb-4">
+
         <strong>Eligible to Drive</strong>
-        <p class="mb-0">@eligibility.Message</p>
+
+        <p class="mb-0">
+            @eligibility.Message
+        </p>
+
     </div>
 }
 else
 {
-    <div class="alert alert-danger">
+    <div class="alert alert-danger mb-4">
+
         <strong>Not Eligible to Drive</strong>
-        <p class="mb-0">@eligibility.Message</p>
+
+        <p class="mb-0">
+            @eligibility.Message
+        </p>
+
     </div>
 }
 
-@if (drivers == null)
-{
-    <p>Loading drivers...</p>
-}
-else if (drivers.Count == 0)
-{
-    <p>No drivers found.</p>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Employee ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var driver in drivers)
-                {
-                    <tr>
-                        <td>@driver.EmployeeId</td>
-                        <td>@driver.FirstName @driver.LastName</td>
-                        <td>@driver.Email</td>
-                        <td>@driver.Status</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-<h2>Available Vehicles</h2>
+<h5 class="mb-3">Available Vehicles</h5>
 
 @if (vehicles == null)
 {
@@ -128,41 +124,83 @@ else
 
     if (availableVehicles.Count == 0)
     {
-        <p>No vehicles are currently available.</p>
+        <div class="alert alert-info">
+            No vehicles are currently available.
+        </div>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Registration</th>
-                        <th>Vehicle</th>
-                        <th>Year</th>
-                    </tr>
-                </thead>
+        <div class="d-flex flex-column gap-2">
 
-                <tbody>
-                    @foreach (var vehicle in availableVehicles)
+            @foreach (var vehicle in availableVehicles)
+            {
+                <div class="card">
+
+                    <button type="button"
+                            class="btn w-100 text-start d-flex justify-content-between align-items-center"
+                            @onclick="() => ToggleVehicle(vehicle.Id)">
+
+                        <strong>
+                            @vehicle.RegistrationNumber —
+                            @vehicle.Make @vehicle.Model
+                        </strong>
+
+                        <span>
+                            @(expandedVehicleId == vehicle.Id ? "▲" : "▼")
+                        </span>
+
+                    </button>
+
+                    @if (expandedVehicleId == vehicle.Id)
                     {
-                        <tr>
-                            <td>@vehicle.RegistrationNumber</td>
-                            <td>@vehicle.Make @vehicle.Model</td>
-                            <td>@vehicle.Year</td>
-                        </tr>
+                        <div class="border-top p-3">
+
+                            <div class="row g-3">
+
+                                <div class="col-md-4">
+                                    <strong>Registration</strong>
+
+                                    <div>
+                                        @vehicle.RegistrationNumber
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <strong>Vehicle</strong>
+
+                                    <div>
+                                        @vehicle.Make @vehicle.Model
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <strong>Year</strong>
+
+                                    <div>
+                                        @vehicle.Year
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
                     }
-                </tbody>
-            </table>
+
+                </div>
+            }
+
         </div>
     }
 }
 
 @code {
+
     private List<DriverDto>? drivers;
     private List<VehicleDto>? vehicles;
-
     private DriverEligibilityDto? eligibility;
     private DriverDto? currentDriver;
+
+    private int? expandedVehicleId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -173,6 +211,7 @@ else
         }
 
         drivers = await ApiService.GetDriversAsync();
+
         vehicles = await ApiService.GetVehiclesAsync();
 
         currentDriver = drivers.FirstOrDefault(
@@ -183,6 +222,14 @@ else
             eligibility = await ApiService.GetDriverEligibilityAsync(
                 currentDriver.Id);
         }
+    }
+
+    private void ToggleVehicle(int vehicleId)
+    {
+        if (expandedVehicleId == vehicleId)
+            expandedVehicleId = null;
+        else
+            expandedVehicleId = vehicleId;
     }
 
     private void Logout()
